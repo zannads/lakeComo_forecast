@@ -6,7 +6,7 @@ classdef hist_series
         name = string();
         description = string();
     end
-        
+    
     properties (Access = protected)
         date = [];
         series = [];
@@ -34,7 +34,7 @@ classdef hist_series
         
         function outputArg = get_coordinate(obj)
             %get_series Get the coordinates of where this time series takes
-            %place 
+            %place
             %   Coordinate is a struct with latitude and longitude.
             outputArg = obj.coordinate;
         end
@@ -42,14 +42,14 @@ classdef hist_series
         function obj = set_series(obj, series)
             %get_series Add the time series that is passed as input
             
-            % Series must be 1-D vertical array 
+            % Series must be 1-D vertical array
             [r, c] = size( series );
             if c > r
                 series = series';
             end
             
             % if larger then one column just lose the following
-            obj.series = series(:, 1); 
+            obj.series = series(:, 1);
         end
         
         function obj = set_date(obj, start_date)
@@ -68,7 +68,7 @@ classdef hist_series
             % vertical and extension of this class will use columns for
             % different lead times.
             end_date = start_date + caldays( size( obj.series, 1) -1);
-            %%TODO check that is not in the future... 
+            %%TODO check that is not in the future...
             
             obj.date = start_date:caldays(1):end_date;
             % verticalize
@@ -79,7 +79,7 @@ classdef hist_series
             %get_series Set the coordinates of where this time series takes
             %place
             
-            obj.coordinate = struct( 'lat', latitude, 'lon', longitude ); 
+            obj.coordinate = struct( 'lat', latitude, 'lon', longitude );
         end
         
         function outputArg = extractTS(obj, varargin)
@@ -88,22 +88,24 @@ classdef hist_series
             
             default_startdate = obj.date(1);
             default_enddate = obj.date(end);
-
-                p = inputParser;
-                % date must be in the right format and also between the
-                % time series, otherwise it will go to default
-                validDate = @(x) strcmp( class(x), class( datetime ) ) &&...
-                    (x >= obj.date(1)) && x<= obj.date(end);
-        
-                addOptional( p, 'StartDate', default_startdate, validDate);        
-                addOptional( p, 'EndDate', default_enddate, validDate);
-                
-                parse( p, varargin{:} );
-                
-                startdate = p.Results.StartDate;
-                enddate = p.Results.EndDate;
             
-            outputArg = obj.series( obj.date >= startdate & obj.date <= enddate ); 
+            p = inputParser;
+            % date must be in the right format and also between the
+            % time series, otherwise it will go to default
+            validDate = @(x) strcmp( class(x), class( datetime ) ) &&...
+                (x >= obj.date(1)) && x<= obj.date(end);
+            
+            addOptional( p, 'StartDate', default_startdate, validDate);
+            addOptional( p, 'EndDate', default_enddate, validDate);
+            
+            parse( p, varargin{:} );
+            
+            startdate = p.Results.StartDate;
+            enddate = p.Results.EndDate;
+            
+            % array : [date, observations] 
+            outputArg = time_series( obj.date( obj.date >= startdate & obj.date <= enddate ),...
+                obj.series( obj.date >= startdate & obj.date <= enddate ) );
         end
         
     end

@@ -2,8 +2,13 @@
 
 %Using the import tool, data is saved as
 % deterministic_forecast 
+deterministic_forecast  = readtable( strcat( raw_data_root, 'forecast_progea_postProcManzoni.xlsx' ) );
+deterministic_forecast = renamevars( deterministic_forecast, ...
+    deterministic_forecast.Properties.VariableNames, ...
+    {'historical', 'lead1', 'lead2', 'lead3', 'subs'} );
+
 % Data is a table with the following columns in m^3/s:
-%   1. historic: historical inflow (at 8 am, average of the 24 hours
+%   1. historical: historical inflow (at 8 am, average of the 24 hours
 % before, in Fuentes???)
 Fuentes = struct( 'Lon', 9.412760, 'Lat', 46.149950); 
 %   2. lead1: determinstic prevision, lead time 24 
@@ -24,7 +29,7 @@ historical.description = "Historical inflow in Fuentes";
 historical = historical.set_coordinate( Fuentes.Lon, Fuentes.Lat);
 
 % populate
-historical = set_series( historical, deterministic_forecast.historic );
+historical = set_series( historical, deterministic_forecast.historical );
 historical = historical.set_date( first_day );
 
 % create the class

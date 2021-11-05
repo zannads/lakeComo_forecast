@@ -26,8 +26,8 @@ classdef forecast_series < hist_series
             % Series must be a vertical array, columns are the lead time
             % steps.
             %Override of hist_series class
-           
-            obj.series = series; 
+            
+            obj.series = series;
         end
         
         function obj = set_lt(obj)
@@ -50,22 +50,28 @@ classdef forecast_series < hist_series
             
             default_startdate = obj.date(1);
             default_enddate = obj.date(end);
-
-                p = inputParser;
-                % date must be in the right format and also between the
-                % time series, otherwise it will go to default
-                validDate = @(x) strcmp( class(x), class( datetime ) ) &&...
-                    (x >= obj.date(1)) && x<= obj.date(end);
-        
-                addOptional( p, 'StartDate', default_startdate, validDate);        
-                addOptional( p, 'EndDate', default_enddate, validDate);
-                
-                parse( p, varargin{:} );
-                
-                startdate = p.Results.StartDate;
-                enddate = p.Results.EndDate;
+            default_leadtime = 1;
             
-            outputArg = obj.series( obj.date >= startdate & obj.date <= enddate ); 
+            p = inputParser;
+            % date must be in the right format and also between the
+            % time series, otherwise it will go to default
+            validDate = @(x) strcmp( class(x), class( datetime ) ) &&...
+                (x >= obj.date(1)) && x<= obj.date(end);
+            validLeadTime = @(x) isnumeric(x) && x>0 & x <= size(obj.series, 2) ;
+            
+            addOptional( p, 'StartDate', default_startdate, validDate);
+            addOptional( p, 'EndDate', default_enddate, validDate);
+            addOptional( p, 'LeadTime', default_leadtime, validLeadTime);
+            
+            parse( p, varargin{:} );
+            
+            startdate = p.Results.StartDate;
+            enddate = p.Results.EndDate;
+            leadtime = p.Results.LeadTime;
+            
+            % array : [date, observations] 
+            outputArg = time_series( obj.date( obj.date >= startdate & obj.date <= enddate ),...
+                obj.series( obj.date >= startdate & obj.date <= enddate, leadtime ) );
         end
         
     end
