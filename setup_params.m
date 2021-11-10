@@ -10,10 +10,15 @@ Fuentes.c = 33;
 Olginate = struct( 'Lon', 9.41338, 'Lat', 45.8053); 
 Olginate.r = 45;
 Olginate.c = 40;
+ComoLake = struct( 'Lon', 9.38175, 'Lat', 45.853973); 
+ComoLake.r = 44;
+ComoLake.c = 39;
 
 % process_data_root = fullfile( matlabdrive, 'lakeComoForecastData' );
 % addpath( process_data_root );
 
 path_ = fullfile( cd, 'data_parser' );
+addpath( path_ );
+path_ = fullfile( cd, 'stats' );
 addpath( path_ );
 clear path_;

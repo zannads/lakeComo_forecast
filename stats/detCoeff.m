@@ -3,7 +3,8 @@ function outputArg = detCoeff( s, o )
 
 % linear correlation coefficient
 R = corrcoef( s, o );
-outputArg.r = R(2); 
+r = R(2);
+outputArg.r = r; 
 %the element off diagonal is the correlation coefficient between the two
 %series, the ones in the diagonal are 1. 
 sigma_s = std( s );
