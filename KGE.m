@@ -1,4 +1,4 @@
-function [kge, d1, d2, d3] = KGE( s, o, varargin)
+function outputArg = KGE( s, o, varargin)
 %KGE - Kling Gupta Efficiency
 
 %% PARSE INPUT
@@ -7,38 +7,37 @@ function [kge, d1, d2, d3] = KGE( s, o, varargin)
 default_out = 'Standard';
 
 if nargin>2
-    if strcmp( 'New', varargin{1} )
-        default_out = 'New';
+    if strcmp( 'Modified', varargin{1} )
+        default_out = 'Modified';
     elseif ~strcmp( 'Standard', varargin{1} )
         warning( 'Last input not recognaised. Standard output is used.' );
     end
 end
 
 % check they are the same lenght and the correct type.
-if ~strcmp( class(s), class(time_series) ) || ~strcmp( class(o), class(time_series) )
+if ~strcmp( class(s), class(timetable) ) || ~strcmp( class(o), class(timetable) )
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be a Time Series object.' );
 end
-if ~isequal( s.date, o.date )
+if ~isequal( s.Time, o.Time )
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be defined in the same time period.' );
 end
 
 %% CALCULATION OF KGE
-[~, A, B, C, r, alpha, beta] = NSE_( s.series, o.series );
+params = detCoeff( s.(1), o.(1) );
 
-ED = sqrt( (r-1)^2 + (alpha-1)^2 + (beta-1)^2 );
-kge = 1-ED;
-
-if strcmp( default_out, 'Standard' )
-    d1 = A;
-    d2 = B;
-    d3 = C;
+if strcmp( 'Standard', default_out )
+    ED = sqrt( (params.r-1)^2 + (params.alpha-1)^2 + (params.beta-1)^2 );
+    outputArg.kge = 1-ED;
+    outputArg.r = params.r;
+    outputArg.alpha = params.alpha;
+    outputArg.beta = params.beta;
 else
-    %now it can only be New
-    d1 = r;
-    d2 = alpha;
-    d3 = beta;
+    ED = sqrt( (params.r-1)^2 + (params.gamma-1)^2 + (params.beta-1)^2 );
+    outputArg.kge = 1-ED;
+    outputArg.r = params.r;
+    outputArg.gamma = params.gamma;
+    outputArg.beta = params.beta;
 end
-
 end

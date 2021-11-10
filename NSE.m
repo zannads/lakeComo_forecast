@@ -1,5 +1,5 @@
-function [nse, d1, d2, d3] = NSE( s, o, varargin)
-%KGE - Kling Gupta Efficiency
+function outputArg = NSE( s, o, varargin)
+%NSE - Nash Sutcliffe Efficiency
 
 %% PARSE INPUT
 % To decide which parameter to return and confirm the matching of the
@@ -7,35 +7,36 @@ function [nse, d1, d2, d3] = NSE( s, o, varargin)
 default_out = 'Standard';
 
 if nargin>2
-    if strcmp( 'New', varargin{1} )
-        default_out = 'New';
+    if strcmp( 'Modified', varargin{1} )
+        default_out = 'Modified';
     elseif ~strcmp( 'Standard', varargin{1} )
         warning( 'Last input not recognaised. Standard output is used.' );
     end
 end
 
 % check they are the same lenght and the correct type.
-if ~strcmp( class(s), class(time_series) ) || ~strcmp( class(o), class(time_series) )
+if ~strcmp( class(s), class(timetable) ) || ~strcmp( class(o), class(timetable) )
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be a Time Series object.' );
 end
-if ~isequal( s.date, o.date )
+if ~isequal( s.Time, o.Time )
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be defined in the same time period.' );
 end
 
 %% CALCULATION OF NSE
-[nse, A, B, C, r, alpha, beta] = NSE_( s.series, o.series );
+params = detCoeff(  s.(1), o.(1) );
 
 if strcmp( default_out, 'Standard' )
-    d1 = A;
-    d2 = B;
-    d3 = C;
+    outputArg.nse = params.A - params.B -params.C;
+    outputArg.A = params.A;
+    outputArg.B = params.B;
+    outputArg.C = params.C;
 else
-    %now it can only be New
-    d1 = r;
-    d2 = alpha;
-    d3 = beta;
+    %now it can only be Modified
+    outputArg.nse = params.A - params.B -params.C;
+    outputArg.r = params.r;
+    outputArg.alpha = params.alpha;
+    outputArg.beta_n = params.beta_n;
 end
-
 end

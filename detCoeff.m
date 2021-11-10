@@ -1,9 +1,9 @@
-function [nse, A, B, C, r, alpha, beta] = NSE_( s, o )
-% NSE in its most extended form
+function outputArg = detCoeff( s, o )
+% params extraction in its most extended form
 
 % linear correlation coefficient
 R = corrcoef( s, o );
-r = R(2); 
+outputArg.r = R(2); 
 %the element off diagonal is the correlation coefficient between the two
 %series, the ones in the diagonal are 1. 
 sigma_s = std( s );
@@ -13,15 +13,17 @@ mu_o = mean( o );
 
 %by KGE
 % strength of the linear relationship between the simulated and observed values
-A = r^2;
+outputArg.A = r^2;
 % conditional bias
-B = (r-sigma_s/sigma_o)^2;
+outputArg.B = (r-sigma_s/sigma_o)^2;
 % unconditional bias
-C = ((mu_s-mu_o)/sigma_o)^2;
+outputArg.C = ((mu_s-mu_o)/sigma_o)^2;
 % relative variability in the simulated and observed values
-alpha = sigma_s/sigma_o;
+outputArg.alpha = sigma_s/sigma_o;
 % bias normalized by the standard deviation in the observed values
-beta = (mu_s-mu_o)/sigma_o;
-
-nse = A-B-C;
+outputArg.beta_n = (mu_s-mu_o)/sigma_o;
+% ratio between the mean simulated and mean observed flows, i.e. bias
+outputArg.beta = mu_s/ mu_o;
+%variability ratio (dimensionless)
+outputArg.gamma = (sigma_s/mu_s)/(sigma_o/mu_o);
 end
