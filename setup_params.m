@@ -14,6 +14,11 @@ ComoLake = struct( 'Lon', 9.38175, 'Lat', 45.853973);
 ComoLake.r = 44;
 ComoLake.c = 39;
 
+detStats = struct( 'kge',[], 'r',[], 'alpha',[],...
+    'beta',[], 'kge_mod',[], 'gamma',[], 'nse',[], 've',[]);
+
+probStats = struct( 'crps', [], 'bs', [], 'rel', [], 'res', [], 'unc', [] );
+
 % process_data_root = fullfile( matlabdrive, 'lakeComoForecastData' );
 % addpath( process_data_root );
 

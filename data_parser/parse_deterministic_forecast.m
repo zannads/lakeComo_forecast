@@ -18,7 +18,7 @@ deterministic_forecast = renamevars( deterministic_forecast, ...
 %   ciclo-stationary mean
 
 % first day is 30 May 2014
-first_day = datetime( 2014, 05, 30, 08, 00, 00 );
+first_day = datetime( 2014, 05, 30 );
 % lastday is 09 October 2020
 
 % create the class
@@ -32,5 +32,7 @@ detForecast = timetable( deterministic_forecast.lead1, deterministic_forecast.le
 detForecast.Properties.StartTime = first_day;
 detForecast.Properties.VariableNames = {'Lead1', 'Lead2', 'Lead3' };
 
-detForecast = addprop( detForecast, {'kge', 'r', 'alpha', 'beta', 'kge_mod', 'gamma', 'nse', 've'}, ...
+detForecast = addprop( detForecast, fieldnames(detStats), ...
     {'variable', 'variable', 'variable', 'variable', 'variable', 'variable', 'variable', 'variable'} );
+
+clear deterministic_forecast first_day

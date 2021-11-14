@@ -1,15 +1,16 @@
 % parse_benchmark
-clear averageDis24 cicloDetForecast consistencyDetForecast
+clear cicloDetForecast
 %% benchmarks 
 %AVERAGE
-meanDis24Historical = mean( historical.dis24 );
-t = size( historical, 1);
-averageDetForecast = timetable( historical.Time, ...
-    meanDis24Historical*ones( t,1), meanDis24Historical*ones( t,1), ...
-    meanDis24Historical*ones( t,1) );
-averageDetForecast.Properties.VariableNames = {'Lead1', 'Lead2', 'Lead3'};
-averageDetForecast = addprop( averageDetForecast, {'kge', 'r', 'alpha', 'beta', 'kge_mod', 'gamma', 'nse', 've'}, ...
-    {'variable', 'variable', 'variable', 'variable', 'variable', 'variable', 'variable', 'variable'} );
+averageDetForecast = mean( historical.dis24 );
+av_detStats = detStats;
+% populate with zeros;
+t_ = zeros(1, size( detForecast, 2) );
+n = fieldnames(detStats);
+for j = 1:length(n)
+    av_detStats.(n{j}) = t_;
+end
+clear t_ j n
 
 
 %CICLOSTATIONARY
@@ -23,23 +24,14 @@ cicloDetForecast = addprop( cicloDetForecast, {'kge', 'r', 'alpha', 'beta', 'kge
     {'variable', 'variable', 'variable', 'variable', 'variable', 'variable', 'variable', 'variable'} );
 
 %CONSISTENCY 
-consistencyDetForecast = timetable( historical.Time, ...
-    [meanDis24Historical; historical.dis24(1:end-1)], ...
-    [meanDis24Historical; historical.dis24(1:end-1)], ...
-    [meanDis24Historical; historical.dis24(1:end-1)] );
-
-consistencyDetForecast.Properties.VariableNames = {'Lead1', 'Lead2', 'Lead3' };
-consistencyDetForecast = addprop( consistencyDetForecast, {'kge', 'r', 'alpha', 'beta', 'kge_mod', 'gamma', 'nse', 've'}, ...
-    {'variable', 'variable', 'variable', 'variable', 'variable', 'variable', 'variable', 'variable'} );
-
+% consistency is just a shift on time, thus I don't create one because I
+% can alwys start from historical.
+con_detStats = av_detStats;
 %%
 figure;
 plot( historical.Time, historical.dis24 );
 hold on; 
-plot( averageDetForecast.Time, averageDetForecast.Lead1 );
+plot( historical.Time, averageDetForecast*ones( size(historical.Time)) );
 plot( cicloDetForecast.Time, cicloDetForecast.Lead1 );
-plot( consistencyDetForecast.Time, consistencyDetForecast.Lead1 );
+plot( historical.Time+1, historical.dis24 );
 legend( 'History', 'Average', 'ciclo', 'consistency' );
-
-%%
-clear first_day deterministic_forecast meanDis24Historical w idx t temp
