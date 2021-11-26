@@ -14,13 +14,10 @@ ComoLake = struct( 'Lon', 9.38175, 'Lat', 45.853973);
 ComoLake.r = 44;
 ComoLake.c = 39;
 
-detStats = struct( 'kge',[], 'r',[], 'alpha',[],...
-    'beta',[], 'kge_mod',[], 'gamma',[], 'nse',[], 've',[]);
-
-probStats = struct( 'crps', [], 'bs', [], 'rel', [], 'res', [], 'unc', [] );
-
 % process_data_root = fullfile( matlabdrive, 'lakeComoForecastData' );
 % addpath( process_data_root );
+
+std_aggregation = [caldays([1; 3; 7; 14; 21; 28; 42]); calmonths(1:7)'];
 
 path_ = fullfile( cd, 'data_parser' );
 addpath( path_ );

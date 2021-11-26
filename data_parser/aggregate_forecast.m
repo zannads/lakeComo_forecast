@@ -1,5 +1,5 @@
 function support = aggregate_forecast( forecast, agg_time )
-if ~strcmp( class(forecast), class(timetable) )
+if ~istimetable(forecast) 
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be a Time Series object.' );
 end

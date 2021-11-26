@@ -1,5 +1,17 @@
 function outputArg = KGE( s, o, varargin)
 %KGE - Kling Gupta Efficiency
+%   k =  = KGE( s, o ) computes the Klint Gupta Efficiency score.
+%   The output k is a struct with the score in the first field. 
+%   The other fields are the usual decomposition r, alpha, beta.
+%   k = KGE( s, o, 'Standard' ) behaves like k = KGE( s, o ).
+%   k = KGE( s, 0, 'Modified' ) creates an output with fields:
+%   -nse
+%   -r
+%   -gamma
+%   -beta
+% The standard names are defined accordingly to Gupta Klint 2009.
+% The modified names are defined accordingly to Klint et al 2012.
+
 
 %% PARSE INPUT
 % To decide which parameter to return and confirm the matching of the
@@ -10,12 +22,12 @@ if nargin>2
     if strcmp( 'Modified', varargin{1} )
         default_out = 'Modified';
     elseif ~strcmp( 'Standard', varargin{1} )
-        warning( 'Last input not recognaised. Standard output is used.' );
+        warning( 'Last input not recognised. Standard output is used.' );
     end
 end
 
 % check they are the same lenght and the correct type.
-if ~strcmp( class(s), class(timetable) ) || ~strcmp( class(o), class(timetable) )
+if ~istimetable(s) | ~istimetable(o)
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be a Time Series object.' );
 end

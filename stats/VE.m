@@ -1,7 +1,12 @@
 function ouptutArg = VE( s, o ) 
+% VE Compute volumetric efficiency score.
+%   v = VE( s, o ) computes the volumetric efficiency score for the
+%   simulation timetable s and the observed timetable o.
+%   
+%   The volumetric efficiency score is computed accordingly to Criss_2008.
 
 % check they are the same lenght and the correct type.
-if ~strcmp( class(s), class(timetable) ) || ~strcmp( class(o), class(timetable) )
+if ~istimetable(s) || ~istimetable(o)
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be a Time Series object.' );
 end

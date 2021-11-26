@@ -1,0 +1,3 @@
+function outputArg = probStats()
+outputArg = struct( 'crps', [], 'annual_bs', [], 'seasonal_bs', [],...
+    'monthly_bs', [], 'daily_bs', [] );

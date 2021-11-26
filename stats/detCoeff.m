@@ -1,15 +1,22 @@
 function outputArg = detCoeff( s, o )
-% params extraction in its most extended form
+%detCoeff Calculates all the parameters needed for the calculation of NSE
+% and KGE scores.
+%   d = detCoeff( s, o ) calculates all the parameters needed for the
+%   calculation of NSE and KGE scores.
+%   There is no check on the inputs. 
+%   The first input s is a n x 1 array containg the simulation. 
+%   The second input o is a n x 1 array containg the observation. 
+% See also NSE and KGE.
 
 % linear correlation coefficient
 R = corrcoef( s, o );
 r = R(2);
-if abs(r) < 10^-3 | isnan(r)
+if abs(r) < 10^-3 | isnan(r)    %to avoid nan and small numerical errors
     r = 0;
 end
 outputArg.r = r; 
 %the element off diagonal is the correlation coefficient between the two
-%series, the ones in the diagonal are 1. 
+%series, the elements in the diagonal are 1. 
 sigma_s = std( s );
 if abs(sigma_s) < 10^-3 | isnan(sigma_s)
     sigma_s = 0;
@@ -18,7 +25,7 @@ sigma_o = std( o );
 mu_s = mean( s );
 mu_o = mean( o );
 
-%by KGE
+%for KGE an NSE
 % strength of the linear relationship between the simulated and observed values
 outputArg.A = r^2;
 % conditional bias
