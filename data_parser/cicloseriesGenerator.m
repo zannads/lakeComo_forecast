@@ -1,11 +1,11 @@
-function historical = cicloseriesGenerator( ciclo, historical )
+function outputArg = cicloseriesGenerator( ciclo, tseries )
 
 %%
-if ~(strcmp( class(historical), class(timetable) ) & strcmp( class(ciclo), class(timetable) ) )
+if ~istimetable(ciclo)
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be a Time Series object.' );
 end
-if size( historical, 1 )< 365*2
+if size( tseries, 1 )< 365*2
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be at least 2 years long.' );
 end
@@ -16,24 +16,20 @@ if size( ciclo, 1 )~= 365
 end
 
 %%
-year_c = ciclo.Time.Year(1);
-for idx = 1:size(historical, 1)
-    d = day(historical.Time(idx));
-    m = month(historical.Time(idx));
-    if m==2 & d==29 & idx>1
+outputArg = zeros( size(tseries, 1), 1 );
+for idx = 1:size(tseries, 1)
+    [y, m, d] = ymd( tseries(idx) );
+    
+    if mod(y, 4) == 0 & m==2 & d==29
         % if leap day use 28th of february and 1st march
-        t1 = strcat( num2str(year_c), '-',num2str(m), '-',num2str(d-1) ); 
-        t1 = timerange( t1, 'days');
-        t1 = ciclo( t1, : );
-        t2 = strcat( num2str(year_c), '-',num2str(m+1), '-', '1' ); 
-        t2 = timerange( t2, 'days');
-        t2 = ciclo( t2, : );
-        historical.dis24(idx) = mean(t1.dis24+t2.dis24);
+        outputArg(idx) = mean( ...
+            [ciclo.dis24( ciclo.Time.Month == 2 & ciclo.Time.Day == 28 );
+            ciclo.dis24( ciclo.Time.Month == 3 & ciclo.Time.Day == 1 )]...
+            );
     else
-        t = strcat( num2str(year_c), '-',num2str(m), '-',num2str(d) ); 
-        t = timerange( t, 'days');
-        t = ciclo( t, : );
-        historical.dis24(idx) = t.dis24;
+        outputArg(idx) = ciclo.dis24( ciclo.Time.Month == m & ciclo.Time.Day == d );
     end
 end
+
+outputArg = timetable( outputArg, 'RowTimes', tseries, 'VariableNames', {'dis24'} );
 end

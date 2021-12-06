@@ -31,4 +31,5 @@ name = strcat( "agg_", string( agg_times )' );
 support = array2timetable( support, 'RowTimes', historical.Time );
 support.Properties.VariableNames = cellstr( name );
 historical = [historical, support];
+historical = historical(:, 2:end );
 end

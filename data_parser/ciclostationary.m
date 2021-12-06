@@ -18,6 +18,7 @@ stream( [isLeapDay(2:end-1);false]) = ...
     (stream( [isLeapDay(2:end-1);false] ) + stream( isLeapDay ) )/2;
 % remove leap days. 
 stream(isLeapDay,:) = [];  
+Time = historical.Time( ~isLeapDay );
 
 %% ciclostationary mean calculation
 n_days = length( stream );
@@ -26,9 +27,8 @@ for idx = 1:365
    ciclo( idx ) = mean( stream( idx:365:n_days ) );
 end
 
-ciclo = timetable( historical.Time(1:365), ciclo );
+ciclo = timetable( Time(1:365), ciclo );
 ciclo.Properties.VariableNames{1} = 'dis24';
-ciclo.Time.Year( ciclo.Time.Year == 2015 ) = ciclo.Time.Year( ciclo.Time.Year == 2015 )-1;
 ciclo = sortrows( ciclo );
 
 end

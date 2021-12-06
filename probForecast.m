@@ -4,16 +4,15 @@ classdef probForecast
     %   For more information see EFAS website.
     
     properties
-        location;   % Where is this forecast issued.
+        location;   % Where this forecast has been issued.
         data;       % Cell array of the ensambles.
         leadTime;   % Maximum leadTime available.
         ensambleN;  % Number of the ensambles.
         daysN;      % Number of days extracted
         
-        first_detStats; %struct for the deterministic stats using the first ensamble.
-        average_detStats; %struct for the deterministic stats using the average ensamble.
+        detScores; %struct for the deterministic scores.
         
-        probStats;  % struct for the probabilistic stats.
+        probScores;  % struct for the probabilistic stats.
     end
     
     methods
@@ -117,9 +116,7 @@ classdef probForecast
             end
             obj.daysN = size( obj.data{1}, 1 );
             
-            obj.average_detStats = detStats;
-            obj.first_detStats = detStats;
-            obj.probStats = probStats; %#ok<CPROPLC>
+            
         end
         
         function outputArg = prob2det(obj, method)
@@ -304,8 +301,10 @@ classdef probForecast
             parse( p, varargin{:} );
             lead_time = p.Results.LeadTime;
             
+            f = aggregate( obj, agg_time );
+            
             %%
-            s = obj.compress( 'AggTime', agg_time, 'LeadTime', lead_time );
+            s = f.compress( 'LeadTime', lead_time );
             % extracted all, thus it is a timetable where each column is an
             % ensamble.
             for idx = 1:width(s)
@@ -403,6 +402,9 @@ classdef probForecast
             outputArg = [outputArg;
                 array2timetable(extracted_values, 'RowTimes',  forecast.Time(end), 'VariableNames', names )];
             
+            % This are forecast issued at time t to have dis24 of time t+1,
+            % thus I need to add 1 day.
+            outputArg.Time = outputArg.Time + caldays(1);
             
         end
     end

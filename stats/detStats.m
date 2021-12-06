@@ -1,3 +1,0 @@
-function outputArg = detStats()
-outputArg = struct( 'kge',[], 'r',[], 'alpha',[],...
-    'beta',[], 'kge_mod',[], 'gamma',[], 'nse',[], 've',[]);

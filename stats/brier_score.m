@@ -8,7 +8,7 @@ classdef brier_score
     %   RES is the resolution of the forecast.
     %   UNC is a measure of the intrinsic noise of the observed system.
     methods (Static)
-        function outputArg = calculate( forecast, observation )
+        function outputArg = calculate( f, o )
             %calculate Calculates the brier score.
             %   bs = brier_score.calculate( forecast, observation )
             %   calculates the BS for the forecast given the observation.
@@ -19,37 +19,19 @@ classdef brier_score
             
             %% parse input
             % check they are the same lenght and the correct type.
-            if ~istimetable( forecast )
-                error( 'BRIER:input', ...
-                    'Error. \nThe input must be a timetable object.' );
-            end
-            if ~ istimetable( observation )
-                error( 'BRIER:input', ...
-                    'Error. \nThe input must be a timetable object.' );
-            end
-            if ~isequal( forecast.Time, observation.Time )
+            %TODO check is array
+            
+            if size(f, 1) ~= size(o, 1) 
                 error( 'BRIER:input', ...
                     'Error. \nThe input must be defined in the same time period.' );
             end
             
-            %% Generate vectors
-            % define the o and f vectors accordingly to the terciles.
-            % o is a logic array where 1 is when the observation lies in
-            % the class
-            o = brier_score.parse( observation );
-            % gen prob 
-            % f is an array with the probabilty of falling in each class.
-            % The probability is defined as the unifrom distirbution: the
-            % number of ensamble falling in the class divided by the number
-            % of the ensambles.
-            f = brier_score.parse( forecast );
-            
             %% calculate
             n = size( f, 1);    % n number of forecast issued /  lenght of the forecast period.
-            d_bar = sum( o, 1 )/n; % average 
+            d_bar = sum( o, 1 )/n; % average
             
             % following the paper from Murphy we see that the forecast can
-            % assume a discrete set of values. 
+            % assume a discrete set of values.
             % r is the collection of the different values.
             % d is the average of the observations for the corresponding r.
             % k is the number of times that value appeared  in the whole
@@ -73,14 +55,14 @@ classdef brier_score
         function outputArg = type( varargin )
             %type is used for set or get how the boundaries are defined
             %during the year.
-            %   There are 4 possible types of division of the year: -
+            %   There are 3 possible types of division of the year: -
             %   annual: just one separation for the whole year. - seasonal:
             %   one separation for each season. - monthly: one separation
-            %   for each month. - daily: one separation for each day.
+            %   for each month.
             % See also brier_score.boundaries.
             
-            %% parse input 
-            valid_types = {'annual', 'seasonal', 'monthly', 'daily' };
+            %% parse input
+            valid_types = {'annual', 'seasonal', 'monthly' };
             if nargin>0 & ~any( strcmp( varargin{1}, valid_types ) )
                 error( 'BRIER:input', 'The inserted type is not valid.' );
             end
@@ -88,9 +70,10 @@ classdef brier_score
             % persistent allows to save the variable between calls, since
             % the method is static, there is just one istance of it always
             % existing, but not global.
-            persistent type; 
+            persistent type;
             if nargin
                 type = varargin{1};
+                brier_score.boundaries( [] ); % reset boundaries to avoid errors
             else
                 if isempty(type)
                     error( 'BRIER:output', 'The type has not been inserted yet.' );
@@ -107,13 +90,13 @@ classdef brier_score
             %   the number of classes.
             % See also brier_score.type.
             
-            %%TODO check input
+            %%TODO check input( must be numeric
             
             persistent bound;
             if nargin
                 bound = varargin{1};
-            else 
-                 if isempty(bound)
+            else
+                if isempty(bound)
                     error( 'BRIER:output', 'The boundaries have not been inserted yet.' );
                 end
             end
@@ -121,12 +104,9 @@ classdef brier_score
             outputArg = bound;
         end
         
-        function tercile = extract_tercile(historical, varargin)
-            %extract_tercile Allows to extract the terciles for a given
-            %timetable of historical observations. 
-            %   For all the possible types the terciles are extracted using
-            %   the uniform distribution.
-            %   TODO: NORMAL DISTRIBUTION, DIFFERENT NUMBER OF CLASSES.
+        function tercile = extract_bounds(historical, quant)
+            %extract_bounds Allows to extract the quantiles for a given
+            %timetable of historical observations.
             
             %% input parser
             if ~istimetable( historical )
@@ -134,137 +114,150 @@ classdef brier_score
                     'Error. \nThe input must be a Time Series object.' );
             end
             
-            tercile = struct( 'annual', nan(1,2), 'seasonal', nan(4,2),...
-                'monthly', nan(12,2), 'daily', nan(365,2) );
-            
-            %% ANNUAL
-            h = reshape( historical.(1),  1, [] );
-            h = sort( h );
-            m = mod( length(h), 3);
-            idx = floor( length(h)/3 );
-            
-            % the boundary lies between two istances, I add the mean
-            % between them to extract it.
-            if m == 1
-                h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
-                    h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
-                idx = floor( length(h)/3 );
-            elseif m == 2
-                h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1, idx+1:end ) ];
-                idx = floor( length(h)/3 );
+            if isempty( quant )
+                error( 'BRIER:input', ...
+                    'Error. \nThe input is empty.' );
             end
             
-            tercile.annual(1,1) = h(1, idx);
-            tercile.annual(1,2) = h(1, 2*idx);
-            %% SEASONAL
-            % 4 seasons
+            q = size(quant, 2);
             st_year = min( historical.Time.Year );
             end_year = max( historical.Time.Year );
             
-            % dates that divide the seasons
-            sd = [21, 3; 21, 6; 23, 9; 21, 12; 21, 3]; 
-            for seas = 1:4
-                h = timetable; %empty
+            
+            %             tercile = struct( 'annual', nan(1, q), 'seasonal', nan(4, q),...
+            %                 'monthly', nan(12, q) );
+            
+            if strcmp( brier_score.type, 'annual' )
+                %% ANNUAL
+                h = reshape( historical.(1),  1, [] );
+                h = sort( h );
+                m = mod( length(h), 3);
+                idx = floor( length(h)/3 );
                 
-                if seas <4 %spring, summer and fall all falls during the year
+                % the boundary lies between two istances, I add the mean
+                % between them to extract it.
+                if m == 1
+                    h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
+                        h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
+                    idx = floor( length(h)/3 );
+                elseif m == 2
+                    h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1, idx+1:end ) ];
+                    idx = floor( length(h)/3 );
+                end
+                
+                tercile(1,1) = h(1, idx);
+                tercile(1,2) = h(1, 2*idx);
+                
+            elseif strcmp( brier_score.type, 'seasonal' )
+                %% SEASONAL
+                % 4 seasons
+                
+                % dates that divide the seasons
+                sd = [21, 3; 21, 6; 23, 9; 21, 12; 21, 3];
+                for seas = 1:4
+                    h = timetable; %empty
+                    
+                    if seas <4 %spring, summer and fall all fells during the year
+                        for year= st_year:end_year
+                            season = timerange( datetime( year, sd(seas, 2), sd(seas, 1) ), ... %start date
+                                datetime( year, sd(seas+1, 2), sd(seas+1, 1) ) );     %end date
+                            h = [ h; historical(season, :) ]; %#ok<*AGROW>
+                        end
+                    else    % winter falls between years.
+                        for year= st_year-1:end_year
+                            season = timerange( datetime( year, sd(seas, 2), sd(seas, 1) ), ... %start date
+                                datetime( year+1, sd(seas+1, 2), sd(seas+1, 1) ) );     %end date
+                            h = [ h; historical(season, :) ];
+                        end
+                    end
+                    
+                    if ~isempty(h)
+                        
+                        h = reshape( h.(1),  1, [] );
+                        h = sort( h );
+                        m = mod( length(h), 3);
+                        idx = floor( length(h)/3 );
+                        
+                        if m == 1
+                            h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
+                                h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
+                            idx = floor( length(h)/3 );
+                        elseif m == 2
+                            h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1, idx+1:end ) ];
+                            idx = floor( length(h)/3 );
+                        end
+                        
+                        tercile(seas,1) = h(1, idx);
+                        tercile(seas,2) = h(1, 2*idx);
+                    end
+                end
+                
+            else
+                %% MONTHLY
+                for mon = 1:12
+                    h = timetable;
+                    
                     for year= st_year:end_year
-                        season = timerange( datetime( year, sd(seas, 2), sd(seas, 1) ), ... %start date
-                            datetime( year, sd(seas+1, 2), sd(seas+1, 1) ) );     %end date
-                        h = [ h; historical(season, :) ]; %#ok<*AGROW>
+                        month = timerange( datetime( year, mon, 1), ... %start date
+                            datetime( year, mon, 1 )+calmonths(1) ) ;    %end date
+                        h = [ h; historical(month, :) ];
                     end
-                else    % winter falls between years.
-                    for year= st_year-1:end_year
-                        season = timerange( datetime( year, sd(seas, 2), sd(seas, 1) ), ... %start date
-                            datetime( year+1, sd(seas+1, 2), sd(seas+1, 1) ) );     %end date
-                        h = [ h; historical(season, :) ];
+                    
+                    
+                    if ~isempty(h)
+                        
+                        h = reshape( h.(1),  1, [] );
+                        h = sort( h );
+                        m = mod( length(h), 3);
+                        idx = floor( length(h)/3 );
+                        
+                        if m == 1
+                            h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
+                                h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
+                            idx = floor( length(h)/3 );
+                        elseif m == 2
+                            h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1, idx+1:end ) ];
+                            idx = floor( length(h)/3 );
+                        end
+                        
+                        tercile(mon,1) = h(1, idx);
+                        tercile(mon,2) = h(1, 2*idx);
                     end
                 end
                 
-                if ~isempty(h)
-                    
-                    h = reshape( h.(1),  1, [] );
-                    h = sort( h );
-                    m = mod( length(h), 3);
-                    idx = floor( length(h)/3 );
-                    
-                    if m == 1
-                        h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
-                            h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
-                        idx = floor( length(h)/3 );
-                    elseif m == 2
-                        h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1, idx+1:end ) ];
-                        idx = floor( length(h)/3 );
-                    end
-                    
-                    tercile.seasonal(seas,1) = h(1, idx);
-                    tercile.seasonal(seas,2) = h(1, 2*idx);
-                end
+                %{
+            % DAILY
+%             for day = 1:365
+%                 h = timetable;
+%
+%                 for year= st_year:end_year
+%                     dayR = timerange( datetime( year, 1, 1)+caldays(day-1), ... %start date
+%                         datetime( year, 1, 1 )+caldays(day) );     %end date
+%                     h = [ h; historical(dayR, :) ];
+%                 end
+%
+%                 if ~isempty(h)
+%
+%                     h = reshape( h.(1),  1, [] );
+%                     h = sort( h );
+%                     m = mod( length(h), 3);
+%                     idx = floor( length(h)/3 );
+%
+%                     if m == 1
+%                         h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
+%                             h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
+%                         idx = floor( length(h)/3 );
+%                     elseif m == 2
+%                         h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1,
+%                         idx+1:end ) ]; idx = floor( length(h)/3 );
+%                     end
+%
+%                     tercile.daily(day,1) = h(1, idx);
+%                     tercile.daily(day,2) = h(1, 2*idx);
+%                 end
+%             end
+                %}
             end
-            
-            
-            %% MONTHLY
-            for mon = 1:12
-                h = timetable;
-                
-                for year= st_year:end_year
-                    month = timerange( datetime( year, mon, 1), ... %start date
-                        datetime( year, mon, 1 )+calmonths(1) ) ;    %end date
-                    h = [ h; historical(month, :) ];
-                end
-                
-                
-                if ~isempty(h)
-                    
-                    h = reshape( h.(1),  1, [] );
-                    h = sort( h );
-                    m = mod( length(h), 3);
-                    idx = floor( length(h)/3 );
-                    
-                    if m == 1
-                        h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
-                            h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
-                        idx = floor( length(h)/3 );
-                    elseif m == 2
-                        h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1, idx+1:end ) ];
-                        idx = floor( length(h)/3 );
-                    end
-                    
-                    tercile.monthly(mon,1) = h(1, idx);
-                    tercile.monthly(mon,2) = h(1, 2*idx);
-                end
-            end
-            
-            %% DAILY
-            for day = 1:365
-                h = timetable;
-                
-                for year= st_year:end_year
-                    dayR = timerange( datetime( year, 1, 1)+caldays(day-1), ... %start date
-                        datetime( year, 1, 1 )+caldays(day) );     %end date
-                    h = [ h; historical(dayR, :) ];
-                end
-                
-                if ~isempty(h)
-                    
-                    h = reshape( h.(1),  1, [] );
-                    h = sort( h );
-                    m = mod( length(h), 3);
-                    idx = floor( length(h)/3 );
-                    
-                    if m == 1
-                        h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
-                            h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
-                        idx = floor( length(h)/3 );
-                    elseif m == 2
-                        h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1, idx+1:end ) ];
-                        idx = floor( length(h)/3 );
-                    end
-                    
-                    tercile.daily(day,1) = h(1, idx);
-                    tercile.daily(day,2) = h(1, 2*idx);
-                end
-            end
-            
         end
         
         function outputArg = parse( signal )
@@ -285,13 +278,15 @@ classdef brier_score
             %% get the boundaries
             % if something its not set it will throw an error.
             t = brier_score.boundaries;
-            t = t.(brier_score.type);
             
             %% dec
+            outputArg = zeros( length( signal.Time ), size( t, 2)+1 );
+            temp = signal.Variables;
+                
+            
             if strcmp( brier_score.type, 'annual' )
                 %% ANNUAL
                 yea = 1;
-                temp = table2array( timetable2table( signal, 'ConvertRowTimes', false ) );
                 
                 outputArg(:, 1) = sum(temp <= t(yea, 1), 2)/nE;
                 outputArg(:, 2) = sum((temp > t(yea, 1)) & (temp <= t(yea, 2)), 2)/nE;
@@ -300,14 +295,12 @@ classdef brier_score
                 
             elseif strcmp( brier_score.type, 'seasonal' )
                 %% seasonal
-                outputArg = zeros( length( signal.Time ), size( t, 2)+1 );
-                temp = table2array( timetable2table( signal, 'ConvertRowTimes', false ) );
                 
                 % extract the season where it starts.
                 fd = signal.Time(1);
                 fy = signal.Time.Year(1);
                 if (fd >= datetime(fy , 3, 21) ) & (fd < datetime(fy, 6, 21) )
-                    % spring 
+                    % spring
                     seas = 1;
                     daysToNext = days(datetime(fy, 6, 21)-fd);
                 elseif (fd >= datetime(fy , 6, 21) ) & (fd < datetime(fy, 9, 23) )
@@ -327,7 +320,7 @@ classdef brier_score
                     daysToNext = min( daysToNext );
                 end
                 
-                % now go on for all the days in the time series 
+                % now go on for all the days in the time series
                 idx = 1;
                 while idx <= height( signal )
                     outputArg(idx, 1) = sum(temp(idx, :) <= t(seas, 1))/nE;
@@ -351,16 +344,14 @@ classdef brier_score
                             daysToNext = days(datetime(fy+1, 3, 21)-fd);
                         else
                             seas = 1;
-                            daysToNext = days(datetime(fy, 6, 21)-fd); 
+                            daysToNext = days(datetime(fy, 6, 21)-fd);
                         end
                     end
                 end
                 
                 
-            elseif strcmp( brier_score.type, 'monthly' )
+            else %if strcmp( brier_score.type, 'monthly' )
                 %% monthly
-                outputArg = zeros( length( signal.Time ), size( t, 2)+1 );
-                temp = table2array( timetable2table( signal, 'ConvertRowTimes', false ) );
                 
                 for idx = 1:length( signal.Time )
                     mon = signal.Time.Month(idx);
@@ -370,7 +361,7 @@ classdef brier_score
                         (temp(idx, :) <= t(mon, 2)) , 2 )/nE;
                     outputArg(idx, 3) = sum(temp(idx, :) > t(mon, 2))/nE;
                 end
-                
+                %{
             else
                 %%   daily
                 outputArg = zeros( length( signal.Time ), size( t, 2)+1 );
@@ -401,6 +392,7 @@ classdef brier_score
                         (temp(idx, :) <= t(d-leapDay, 2)) , 2 )/nE;
                     outputArg(idx, 3) = sum(temp(idx, :) > t(d-leapDay, 2))/nE;
                 end
+                %}
             end
             
             
@@ -423,7 +415,7 @@ classdef brier_score
                 % just a fast check on the dimension. It should be checked
                 % before calling this function.
                 
-                % Take the first element. 
+                % Take the first element.
                 r = forecast(1, :);
                 
                 % find which are equal to the first
