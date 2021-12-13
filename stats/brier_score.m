@@ -21,35 +21,45 @@ classdef brier_score
             % check they are the same lenght and the correct type.
             %TODO check is array
             
-            if size(f, 1) ~= size(o, 1) 
+            if any(size(f) ~= size(o))
                 error( 'BRIER:input', ...
                     'Error. \nThe input must be defined in the same time period.' );
             end
             
-            %% calculate
-            n = size( f, 1);    % n number of forecast issued /  lenght of the forecast period.
-            d_bar = sum( o, 1 )/n; % average
-            
-            % following the paper from Murphy we see that the forecast can
-            % assume a discrete set of values.
-            % r is the collection of the different values.
-            % d is the average of the observations for the corresponding r.
-            % k is the number of times that value appeared  in the whole
-            % timehistory, sum k = 1.
-            [r, d, k] = brier_score.decompose( f, o );
-            
-            % Brier score accordingly to Brier 1950.
-            bs = sum( (f-o).^2 , 'all')/n;
-            % Decomposition accordingly to Murhpy 1973.
-            rel = 1/n*k'*diag((r-d)*(r-d)');
-            res = 1/n*k'*diag((d-d_bar)*(d-d_bar)');
-            unc = d_bar*( ones(size(d_bar)) - d_bar)';
-            
-            outputArg.bs = bs;
-            outputArg.rel = rel;
-            outputArg.res = res;
-            outputArg.unc = unc;
-            outputArg.type = brier_score.type;
+            m = size( f, 3 );
+            for mdx = 1:m
+                %% calculate
+                % go along 3rd direction
+                f_ = f(:,:, mdx);
+                o_ = o(:,:, mdx);
+                % remove nan
+                f_( isnan(f_(:,1)), :) = [];
+                o_( isnan(o_(:,1)), :) = [];
+                
+                n = size( f_, 1);    % n number of forecast issued /  lenght of the forecast period.
+                d_bar = sum( o_, 1 )/n; % average
+                
+                % following the paper from Murphy we see that the forecast can
+                % assume a discrete set of values.
+                % r is the collection of the different values.
+                % d is the average of the observations for the corresponding r.
+                % k is the number of times that value appeared  in the whole
+                % timehistory, sum k = 1.
+                [r, d, k] = brier_score.decompose( f_, o_ );
+                
+                % Brier score accordingly to Brier 1950.
+                bs = sum( (f_-o_).^2 , 'all')/n;
+                % Decomposition accordingly to Murhpy 1973.
+                rel = 1/n*k'*diag((r-d)*(r-d)');
+                res = 1/n*k'*diag((d-d_bar)*(d-d_bar)');
+                unc = d_bar*( ones(size(d_bar)) - d_bar)';
+                
+                outputArg.bs(mdx) = bs;
+                outputArg.rel(mdx) = rel;
+                outputArg.res(mdx) = res;
+                outputArg.unc(mdx) = unc;
+                outputArg.type = brier_score.type;
+            end
         end
         
         function outputArg = type( varargin )
@@ -104,12 +114,12 @@ classdef brier_score
             outputArg = bound;
         end
         
-        function tercile = extract_bounds(historical, quant)
+        function tercile = extract_bounds(tt, quant)
             %extract_bounds Allows to extract the quantiles for a given
             %timetable of historical observations.
             
             %% input parser
-            if ~istimetable( historical )
+            if ~istimetable( tt )
                 error( 'BRIER:input', ...
                     'Error. \nThe input must be a Time Series object.' );
             end
@@ -117,36 +127,18 @@ classdef brier_score
             if isempty( quant )
                 error( 'BRIER:input', ...
                     'Error. \nThe input is empty.' );
+            elseif any(quant<=0 | quant >=1 )
+                error( 'BRIER:input', ...
+                    'Error. \nThe quantiles inserted are not valid.' );
             end
             
             q = size(quant, 2);
-            st_year = min( historical.Time.Year );
-            end_year = max( historical.Time.Year );
-            
-            
-            %             tercile = struct( 'annual', nan(1, q), 'seasonal', nan(4, q),...
-            %                 'monthly', nan(12, q) );
+            st_year = min( tt.Time.Year );
+            end_year = max( tt.Time.Year );
             
             if strcmp( brier_score.type, 'annual' )
                 %% ANNUAL
-                h = reshape( historical.(1),  1, [] );
-                h = sort( h );
-                m = mod( length(h), 3);
-                idx = floor( length(h)/3 );
-                
-                % the boundary lies between two istances, I add the mean
-                % between them to extract it.
-                if m == 1
-                    h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
-                        h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
-                    idx = floor( length(h)/3 );
-                elseif m == 2
-                    h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1, idx+1:end ) ];
-                    idx = floor( length(h)/3 );
-                end
-                
-                tercile(1,1) = h(1, idx);
-                tercile(1,2) = h(1, 2*idx);
+               tercile(1, :) = quantile( reshape(tt.Variables, 1, []), q );
                 
             elseif strcmp( brier_score.type, 'seasonal' )
                 %% SEASONAL
@@ -161,34 +153,18 @@ classdef brier_score
                         for year= st_year:end_year
                             season = timerange( datetime( year, sd(seas, 2), sd(seas, 1) ), ... %start date
                                 datetime( year, sd(seas+1, 2), sd(seas+1, 1) ) );     %end date
-                            h = [ h; historical(season, :) ]; %#ok<*AGROW>
+                            h = [ h; tt(season, :) ]; %#ok<*AGROW>
                         end
                     else    % winter falls between years.
                         for year= st_year-1:end_year
                             season = timerange( datetime( year, sd(seas, 2), sd(seas, 1) ), ... %start date
                                 datetime( year+1, sd(seas+1, 2), sd(seas+1, 1) ) );     %end date
-                            h = [ h; historical(season, :) ];
+                            h = [ h; tt(season, :) ];
                         end
                     end
                     
                     if ~isempty(h)
-                        
-                        h = reshape( h.(1),  1, [] );
-                        h = sort( h );
-                        m = mod( length(h), 3);
-                        idx = floor( length(h)/3 );
-                        
-                        if m == 1
-                            h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
-                                h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
-                            idx = floor( length(h)/3 );
-                        elseif m == 2
-                            h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1, idx+1:end ) ];
-                            idx = floor( length(h)/3 );
-                        end
-                        
-                        tercile(seas,1) = h(1, idx);
-                        tercile(seas,2) = h(1, 2*idx);
+                        tercile(seas, :) = quantile( reshape(h.Variables, 1, []), q );
                     end
                 end
                 
@@ -200,63 +176,13 @@ classdef brier_score
                     for year= st_year:end_year
                         month = timerange( datetime( year, mon, 1), ... %start date
                             datetime( year, mon, 1 )+calmonths(1) ) ;    %end date
-                        h = [ h; historical(month, :) ];
+                        h = [ h; tt(month, :) ];
                     end
-                    
-                    
+                     
                     if ~isempty(h)
-                        
-                        h = reshape( h.(1),  1, [] );
-                        h = sort( h );
-                        m = mod( length(h), 3);
-                        idx = floor( length(h)/3 );
-                        
-                        if m == 1
-                            h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
-                                h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
-                            idx = floor( length(h)/3 );
-                        elseif m == 2
-                            h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1, idx+1:end ) ];
-                            idx = floor( length(h)/3 );
-                        end
-                        
-                        tercile(mon,1) = h(1, idx);
-                        tercile(mon,2) = h(1, 2*idx);
+                        tercile(mon, :) = quantile( reshape(h.Variables, 1, []), q );
                     end
                 end
-                
-                %{
-            % DAILY
-%             for day = 1:365
-%                 h = timetable;
-%
-%                 for year= st_year:end_year
-%                     dayR = timerange( datetime( year, 1, 1)+caldays(day-1), ... %start date
-%                         datetime( year, 1, 1 )+caldays(day) );     %end date
-%                     h = [ h; historical(dayR, :) ];
-%                 end
-%
-%                 if ~isempty(h)
-%
-%                     h = reshape( h.(1),  1, [] );
-%                     h = sort( h );
-%                     m = mod( length(h), 3);
-%                     idx = floor( length(h)/3 );
-%
-%                     if m == 1
-%                         h = [h(1, 1:idx), mean(h(1, idx:idx+1)), ...
-%                             h( 1, (idx+1):(2*idx) ), mean( h( 1, (2*idx):(2*idx+1))),   h( 1, (2*idx+1):end ) ];
-%                         idx = floor( length(h)/3 );
-%                     elseif m == 2
-%                         h = [h(1, 1:idx), mean(h(1, idx:idx+1)), h( 1,
-%                         idx+1:end ) ]; idx = floor( length(h)/3 );
-%                     end
-%
-%                     tercile.daily(day,1) = h(1, idx);
-%                     tercile.daily(day,2) = h(1, 2*idx);
-%                 end
-%             end
-                %}
             end
         end
         
@@ -274,28 +200,68 @@ classdef brier_score
                     'Error. \nThe input must be a timetable object.' );
             end
             
-            nE = size( signal, 2);
+            [~, nE] = size( signal);
             %% get the boundaries
             % if something its not set it will throw an error.
             t = brier_score.boundaries;
+            [m, q] = size( t);
             
             %% dec
-            outputArg = zeros( length( signal.Time ), size( t, 2)+1 );
             temp = signal.Variables;
                 
-            
-            if strcmp( brier_score.type, 'annual' )
-                %% ANNUAL
-                yea = 1;
+            %if strcmp( brier_score.type, 'annual' )
+                % ANNUAL 
+                % no change needed
                 
-                outputArg(:, 1) = sum(temp <= t(yea, 1), 2)/nE;
-                outputArg(:, 2) = sum((temp > t(yea, 1)) & (temp <= t(yea, 2)), 2)/nE;
-                outputArg(:, 3) = sum(temp > t(yea, 2), 2)/nE;
-                
-                
-            elseif strcmp( brier_score.type, 'seasonal' )
+            if strcmp( brier_score.type, 'seasonal' )
                 %% seasonal
+                temp_m = repmat(cell(1), 1, 1, 4);
                 
+                % reshape per season
+                time_ = signal.Time;
+                seas = 1; % before spring begin
+                fy = signal.Time.Year(1); % first year
+                sd = [21, 3; 21, 6; 23, 9; 21, 12; 21, 3]; % days that separate seasons
+                while ~isempty( temp ) 
+                    % get the array pos before the change of the season
+                    per = time_ < datetime(fy, sd(seas, 2), sd(seas, 1)); 
+                    
+                    % append the element of that season to the relative
+                    % season, I should use seas-1. 
+                    if seas ~= 1
+                        temp_m{seas-1} = [temp_m{seas-1}; temp( per, : )]; 
+                    else
+                        % I can't index with 0, winter is 4
+                        temp_m{4} = [temp_m{4}; temp( per, : )]; 
+                    end
+                    
+                     % remove the used period
+                    time_(per, :) = [];   
+                    temp( per, :) = [];
+                    
+                    % go to next season
+                    if seas <4
+                        seas = seas+1;
+                    else 
+                        seas = 1;
+                        % again to spring, change year
+                        fy = fy +1;
+                    end
+                end
+                
+                
+                % get longest
+                max_l = 0;
+                for seas = 1:4
+                    max_l = max( max_l, size(temp_m{seas}, 1) );
+                end
+                
+                % fill the nans and then concatenate
+                for seas = 1:4
+                    temp_m{seas}(end+1:max_l, :) = nan;
+                end
+                temp = cell2mat( temp_m );
+                %{
                 % extract the season where it starts.
                 fd = signal.Time(1);
                 fy = signal.Time.Year(1);
@@ -348,53 +314,43 @@ classdef brier_score
                         end
                     end
                 end
-                
-                
-            else %if strcmp( brier_score.type, 'monthly' )
-                %% monthly
-                
-                for idx = 1:length( signal.Time )
-                    mon = signal.Time.Month(idx);
-                    
-                    outputArg(idx, 1) = sum(temp(idx, :) <= t(mon, 1))/nE;
-                    outputArg(idx, 2) = sum( (temp(idx, :) > t(mon, 1)) & ...
-                        (temp(idx, :) <= t(mon, 2)) , 2 )/nE;
-                    outputArg(idx, 3) = sum(temp(idx, :) > t(mon, 2))/nE;
-                end
-                %{
-            else
-                %%   daily
-                outputArg = zeros( length( signal.Time ), size( t, 2)+1 );
-                temp = table2array( timetable2table( signal, 'ConvertRowTimes', false ) );
-                
-                leapDay = 0;
-                for idx = 1:length( signal.Time )
-                    yea = signal.Time.Year(idx);
-                    d_from_start = signal.Time(idx)-datetime( yea, 1, 1);
-                    d = days( d_from_start )+1;
-                    
-                    % remove leap day and eventually do -1
-                    if leapDay==0 & mod(yea, 4) == 0 & signal.Time.Month(idx)==2 & signal.Time.Day(idx) == 29
-                        leapDay = 1;
-                        count = 307; % there are 306 days between 28th feb to 31st dec, one more for the leap day
-                    end
-                    
-                    if leapDay==1
-                        if count==0
-                            % the year has finished
-                            leapDay = 0;
-                        end
-                        count = count -1;
-                    end
-                    
-                    outputArg(idx, 1) = sum(temp(idx, :) <= t(d-leapDay, 1))/nE;
-                    outputArg(idx, 2) = sum( (temp(idx, :) > t(d-leapDay, 1)) & ...
-                        (temp(idx, :) <= t(d-leapDay, 2)) , 2 )/nE;
-                    outputArg(idx, 3) = sum(temp(idx, :) > t(d-leapDay, 2))/nE;
-                end
                 %}
+                
+            elseif strcmp( brier_score.type, 'monthly' )
+                %% monthly
+                max_l = 0;
+                temp_m = repmat(cell(1), 1, 1, 12);
+                
+                % reshape per month
+                for mon = 1:12
+                    temp_m{mon} = temp( signal.Time.Month == mon, : );
+                    max_l = max( max_l, size(temp_m{mon}, 1) );
+                end
+                
+                % fill the nans and then concatenate
+                for mon = 1:12
+                    temp_m{mon}(end+1:max_l, :) = nan;
+                end
+                temp = cell2mat( temp_m );
             end
             
+            %% calculation
+            outputArg = nan( size( temp, 1 ), q+1, m );
+            
+            for mdx = 1:m
+                s = temp(:, :, mdx);
+                sdx = ~isnan( s(:,1) );
+                
+                qdx = 1;
+                outputArg(sdx, qdx, mdx) = sum( s(sdx, :) <= t(mdx, 1), 2)/nE;
+                
+                for qdx = 2:q
+                    outputArg(sdx, qdx, mdx) = sum( (s(sdx, :) > t(mdx, qdx-1)) & (s(sdx, :) <= t(mdx, qdx)), 2)/nE;
+                end
+                
+                qdx = q+1;
+                outputArg(sdx, qdx, mdx) = sum(s(sdx, :) > t(mdx, q), 2)/nE;
+            end
             
         end
         

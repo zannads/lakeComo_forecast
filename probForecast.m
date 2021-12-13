@@ -11,8 +11,6 @@ classdef probForecast
         daysN;      % Number of days extracted
         
         detScores; %struct for the deterministic scores.
-        
-        probScores;  % struct for the probabilistic stats.
     end
     
     methods
@@ -281,8 +279,13 @@ classdef probForecast
             %   lead_time ) creates a plot with a time step of agg_time
             %   days and lead time of lead_time day.
             
-            outputArg = figure;
-            
+            if nargin >1 & any( strcmp( varargin, 'Figure' ) )
+                idx = find( strcmp( varargin, 'Figure' ), 1, 'first');
+                outputArg = varargin{idx+1};
+                varargin(idx:idx+1) = [];
+            else
+                outputArg = figure;
+            end
             %% parse input
              p = inputParser;
              p.KeepUnmatched = true; % since I need to check AggTime before and then LeadTime I use parse twice.
@@ -290,6 +293,10 @@ classdef probForecast
             default_aggTime = caldays(1);
             check_value = @(x) obj.valid_agg_time(x);
             addParameter(p,'AggTime', default_aggTime, check_value);
+            
+            default_color = 'default';
+            check_color = @(x) size(x, 2) == 3; % also size and color but the error is thorow by the function anyway
+            addParameter(p,'ColorOrder', default_color, check_color);
             
             parse( p, varargin{:} );
             agg_time = p.Results.AggTime;
@@ -300,6 +307,7 @@ classdef probForecast
             
             parse( p, varargin{:} );
             lead_time = p.Results.LeadTime;
+            colororder( p.Results.ColorOrder );
             
             f = aggregate( obj, agg_time );
             
@@ -308,7 +316,7 @@ classdef probForecast
             % extracted all, thus it is a timetable where each column is an
             % ensamble.
             for idx = 1:width(s)
-                plot( s.Time+agg_time*lead_time, s.(idx) );
+                plot(outputArg, s.Time(lead_time:end), s(1:end-lead_time+1,:).(idx), 'LineWidth', 1 );
                 hold on;
             end
             
