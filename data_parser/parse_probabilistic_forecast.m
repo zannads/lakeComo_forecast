@@ -1,6 +1,6 @@
 %LOAD PROBABILISTIC FORECAST
 if ~exist( 'location', 'var' )
-    location = ComoLake;
+    location = LakeComo;
 end
 %% lets start with extended range: efrf
 % get a list of object in the folder and remove all non NetCDF files 

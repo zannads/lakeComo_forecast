@@ -1,5 +1,5 @@
 % parse_benchmark
-clear averageDetForecast cicloDetForecast conDetForecast h
+clear averageDetForecast cicloDetForecast conDetForecast h hAgg
 %%
 
 % first day is 1 january 2000

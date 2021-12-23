@@ -138,7 +138,7 @@ classdef brier_score
             
             if strcmp( brier_score.type, 'annual' )
                 %% ANNUAL
-               tercile(1, :) = quantile( reshape(tt.Variables, 1, []), q );
+               tercile(1, :) = quantile( reshape(tt.Variables, 1, []), quant );
                 
             elseif strcmp( brier_score.type, 'seasonal' )
                 %% SEASONAL
@@ -164,7 +164,7 @@ classdef brier_score
                     end
                     
                     if ~isempty(h)
-                        tercile(seas, :) = quantile( reshape(h.Variables, 1, []), q );
+                        tercile(seas, :) = quantile( reshape(h.Variables, 1, []), quant );
                     end
                 end
                 
@@ -180,7 +180,7 @@ classdef brier_score
                     end
                      
                     if ~isempty(h)
-                        tercile(mon, :) = quantile( reshape(h.Variables, 1, []), q );
+                        tercile(mon, :) = quantile( reshape(h.Variables, 1, []), quant );
                     end
                 end
             end
