@@ -10,57 +10,82 @@ classdef lakeComo < lake
         function a = level2surface(obj, h)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
+            if nargin < 2
+                h = 0;
+            end
+            
             a = obj.surface;
         end
         
         function s = level2storage(obj, h, p)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
+            
+            if nargin == 2
+                p = 0;
+            end
+            
             h0 = -0.4 + p;
             s = obj.surface*(h-h0);
         end
         
         function h = storage2level(obj, s, p)
+            if nargin == 2
+                p = 0;
+            end
             
             h0 = -0.4+p;
             h = s/obj.surface + h0;
         end
        
         function q = min_release(obj, s, doy, p)
+            if nargin == 3 
+                p = 0;
+            end
+           
+            doy = doy(:);   % make vertical
+            n_t = length(doy);
+            s = s(:)'; % make horizontal
+            n_s = length( s ) ;
+            
             DMV = obj.minEnvFlow{ doy, 1};
             h = obj.storage2level( s, p);
-            
+
             h0 = -0.4 + p;
+            q = nan( n_t, n_s );
             
-            if h <= h0
-                q = 0;
-            elseif h <= 1.10
-                q = DMV;
-            else
-                q = 33.37* (h+2.5).^2.015;
-            end
+            q(:,  h <= h0) = 0;
+            q(:, h>h0 &  h <= 1.10) = DMV*ones(1, size(h(h>h0 &  h <= 1.10), 2) );
+            q(:, h > 1.10) = repmat(33.37* (h(:, h > 1.10) +2.5).^2.015, n_t, 1);
             
         end
         
         function q = max_release(obj, s, doy, p )
+             if nargin < 4
+                p = 0;
+             end
+             if nargin < 3
+                doy = datetime;
+             end
+            
+            doy = doy(:);   % make vertical
+            n_t = length(doy);
+            s = s(:)'; % make horizontal
+            n_s = length( s ) ;
             
             h = obj.storage2level( s, p);
             h0 = -0.4 +p;
+            
+            q = nan( n_t, n_s );
             
             idx = 33.37*((h0+0.1+2.5).^2.015);
             m = idx/0.1;
             it = -m*h0;
             
-            if h<= h0
-                q = 0;
-            elseif h<= h0+0.1
-                q = m*h+it;
-            else
-                q = 33.37* (h+2.5).^2.015;
-            end
-                
+            q(:,  h <= h0) = 0;
+            q(:,  h > h0 &  h<= h0+0.1) = repmat( m*h(:, h > h0 &  h<= h0+0.1) +it, n_t, 1);
+            q(:, h >  h0+0.1) =  repmat( 33.37* (h( :, h>h0+0.1)+2.5).^2.015, n_t, 1);
         end
-        
     end
 end
 

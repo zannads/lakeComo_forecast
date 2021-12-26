@@ -131,7 +131,7 @@ classdef model_lakecomo
                 % doy(t) = ...
                 
                 %inflow
-                qIn = qIntot(idx);
+                qIn = qIntot(t);
                 
                 % decision for policy
                 %...
