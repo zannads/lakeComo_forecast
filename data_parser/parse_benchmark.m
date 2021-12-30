@@ -1,40 +1,27 @@
 % parse_benchmark
-clear averageDetForecast cicloDetForecast conDetForecast h hAgg
+clear historical averageDetForecast cicloDetForecast conDetForecast h hAgg
 %%
 
-% first day is 1 january 2000
-first_day = datetime( 2000, 1, 1 );
-
-fid = fopen('/Users/denniszanutto/Documents/Data/Short_term_forecast/comoInflow_ext.txt');
+fid = fopen( fullfile( raw_data_root, 'utils', 'Lake_Como_Data_1946_2019.txt' ) );
 tline = string.empty;
+%delete first row as it is only info.
+fgetl(fid);
 while ~feof(fid)
-tline(end+1) = fgetl(fid); %#ok<SAGROW>
+tline(end+1, :) = fgetl(fid); %#ok<SAGROW>
 end
 fclose(fid);
 
-h = str2double( tline );
+h = str2double( split(tline) );
+t = datetime( h(:,3), h(:,2), h(:,1) );
+h = h(:, 4:end);
 
-%% for when I use comoInflow.txt
-% tidx = 1;
-% fidx = 1;
-% while fidx <= length(tline) 
-%     [y, m, d] = ymd( first_day+tidx-1 );
-%     
-%     if mod(y, 4) == 0 & m == 2 & d == 29
-%         h(tidx) = (str2double(tline(fidx))+str2double(tline(fidx-1)))/2;
-%     else
-%         h(tidx) = str2double( tline(fidx) );
-%         fidx = fidx+1;
-%     end
-%     tidx = tidx+1;
-% end
-  
-%%
-historical = timetable( h', 'TimeStep', days(1), 'StartTime', first_day, 'VariableNames', {'dis24'} );
+historical = array2timetable( h, 'RowTimes', t, ...
+    'VariableNames', {'h', 'r', 'dis24'} );
 
-hAgg = aggregate_historical(historical, std_aggregation );    
+clear h t tline fid 
 
-clear first_day tidx tline fid y m d fidx h
+qAgg = aggregate_historical(historical(DT_S:historical.Time(end), "dis24"), std_aggregation );    
+
 %% help 
 l = length( historical.Time);
 l_agg = length( std_aggregation );

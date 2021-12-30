@@ -21,10 +21,10 @@ Mandello.fname = 'Mandello';
 Mandello.r = 43;
 Mandello.c = 38;
 
-% process_data_root = fullfile( matlabdrive, 'lakeComoForecastData' );
-% addpath( process_data_root );
-
 std_aggregation = [caldays([1, 3, 7:7:28])'; calmonths(1); caldays([42, 56])'; calmonths(2:7)'];
+
+DT_S = datetime(1999, 1, 1);
+DT_E = datetime(2018, 12, 31);
 
 path_ = fullfile( cd, 'data_parser' );
 addpath( path_ );
