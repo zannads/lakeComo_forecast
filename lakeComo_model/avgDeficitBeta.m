@@ -62,7 +62,7 @@ classdef avgDeficitBeta <objFunction
              %negative values are not allowed, thus set to 0.
              d( d<0 ) = 0;
              
-             %deficit, w demand must already be shifted by one day ??
+             %deficit
              d = obj.demand( myDOY(doy) ) -d;
              d( d<0 ) = 0;
              
@@ -70,7 +70,7 @@ classdef avgDeficitBeta <objFunction
              d = d.^(2-obj.rain_weight{doy, 1});
              
              %average 
-             outputArg = mean(d, 1);
+             outputArg = mean(d, 1, 'omitnan');
              
         end
         

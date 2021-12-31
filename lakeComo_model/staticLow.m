@@ -38,7 +38,7 @@ classdef staticLow < objFunction
             else %should thorw some error
             end
             
-            outputArg = sum( double( h < obj.s_low( myDOY(doy) ) ),  1);
+            outputArg = sum( double( h < obj.s_low( myDOY(doy) ) ),  1, 'omitnan');
         end
     end
 end

@@ -30,7 +30,7 @@ classdef floodDays < objFunction
             end
             doy = 1;
             
-            outputArg = sum(  double( h > obj.h_flo(doy) ), 1 );
+            outputArg = sum(  double( h > obj.h_flo(doy) ), 1, 'omitnan' );
         end
     end
 end
