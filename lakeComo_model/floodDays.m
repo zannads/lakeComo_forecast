@@ -25,12 +25,8 @@ classdef floodDays < objFunction
         function outputArg = evaluate(obj, h)
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
-            if istimetable( h )
-                h = h.(1);
-            end
-            doy = 1;
             
-            outputArg = sum(  double( h > obj.h_flo(doy) ), 1, 'omitnan' );
+            outputArg = sum(  double( h > obj.h_flo ), 1, 'omitnan' );
         end
     end
 end

@@ -28,17 +28,7 @@ classdef staticLow < objFunction
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
             
-            if nargin == 2 & istimetable(h)
-                %i.e. no doy used
-                %get doy from h
-                doy = h.Time;
-                h = h.(1);
-            elseif nargin == 3 & isa( h, 'double') & isdatetime( doy )
-                %its ok 
-            else %should thorw some error
-            end
-            
-            outputArg = sum( double( h < obj.s_low( myDOY(doy) ) ),  1, 'omitnan');
+            outputArg = sum( double( h < obj.s_low( doy ) ),  1, 'omitnan');
         end
     end
 end

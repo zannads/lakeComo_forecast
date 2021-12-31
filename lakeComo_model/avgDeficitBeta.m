@@ -27,11 +27,11 @@ classdef avgDeficitBeta <objFunction
                 end
             end
         end
-            
+        
         function obj = setMEF( obj, param)
             
-                obj.MEF = obj.validParam(param);
-           
+            obj.MEF = obj.validParam(param);
+            
         end
         
         function obj = setDemand( obj, param)
@@ -43,35 +43,25 @@ classdef avgDeficitBeta <objFunction
             
             obj.rain_weight = obj.validParam(param);
         end
-       
-        function outputArg = evaluate( obj, q, doy)
+        
+        function outputArg = evaluate( obj, q, cday, doy)
             
-            if nargin == 2 & istimetable(h)
-                %i.e. no doy used
-                %get doy from h
-                doy = q.Time ;
-                q = q.(1);
-            elseif nargin == 3 & isa( q, 'double') & isdatetime( doy )
-                %its ok
-            else %should thorw some error
-            end
+            %remove MEF
+            d = q - obj.MEF( cday );
             
-             %remove MEF
-             d = q - obj.MEF{ doy, 1 };
-             
-             %negative values are not allowed, thus set to 0.
-             d( d<0 ) = 0;
-             
-             %deficit
-             d = obj.demand( myDOY(doy) ) -d;
-             d( d<0 ) = 0;
-             
-             %elevate to the requested power
-             d = d.^(2-obj.rain_weight{doy, 1});
-             
-             %average 
-             outputArg = mean(d, 1, 'omitnan');
-             
+            %negative values are not allowed, thus set to 0.
+            d( d<0 ) = 0;
+            
+            %deficit
+            d = obj.demand( doy ) -d;
+            d( d<0 ) = 0;
+            
+            %elevate to the requested power
+            d = d.^(2-obj.rain_weight(cday) );
+            
+            %average
+            outputArg = mean(d, 1, 'omitnan');
+            
         end
         
     end

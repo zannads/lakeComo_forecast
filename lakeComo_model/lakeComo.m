@@ -38,17 +38,17 @@ classdef lakeComo < lake
             h = s/obj.surface + h0;
         end
        
-        function q = min_release(obj, s, doy, p)
+        function q = min_release(obj, s, cday, p)
             if nargin == 3 
                 p = 0;
             end
            
-            doy = doy(:);   % make vertical
-            n_t = length(doy);
+            cday = cday(:);   % make vertical
+            n_t = length(cday);
             s = s(:)'; % make horizontal
             n_s = length( s ) ;
             
-            DMV = obj.minEnvFlow{ doy, 1};
+            DMV = obj.minEnvFlow( cday, 1);
             h = obj.storage2level( s, p);
 
             h0 = -0.4 + p;
@@ -60,16 +60,16 @@ classdef lakeComo < lake
             
         end
         
-        function q = max_release(obj, s, doy, p )
+        function q = max_release(obj, s, cday, p )
              if nargin < 4
                 p = 0;
              end
              if nargin < 3
-                doy = datetime;
+                cday = 1;
              end
             
-            doy = doy(:);   % make vertical
-            n_t = length(doy);
+            cday = cday(:);   % make vertical
+            n_t = length(cday);
             s = s(:)'; % make horizontal
             n_s = length( s ) ;
             

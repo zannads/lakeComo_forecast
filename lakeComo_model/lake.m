@@ -50,7 +50,7 @@ classdef lake
                     
                     a = obj.level2surface( obj.storage2level(s(idx), p) );
                     
-                    e = obj.evap_rates(cday-1, :)/1000*a/86400;
+                    e = obj.evap_rates(cday, :)/1000*a/86400;
                 elseif obj.ev > 1
                     %todo
                 else
@@ -75,12 +75,12 @@ classdef lake
             
         end
         
-        function outputArg = relToTailWater(obj,  r )
-            
-            if ~isempty( obj.tailwater )
-                outputArg = interp1( obj.tailwater(0), obj.tailwater(1), r);
-            end
-        end
+%         function outputArg = relToTailWater(obj,  r )
+%             
+%             if ~isempty( obj.tailwater )
+%                 outputArg = interp1( obj.tailwater(0), obj.tailwater(1), r);
+%             end
+%         end
         
         function obj = setSurface( obj, a )
             obj.surface = a;
@@ -100,35 +100,17 @@ classdef lake
             obj.minEnvFlow = MEF;
         end
         
-        function MEF = getMEF( obj, doy )
+        function MEF = getMEF( obj, cday )
             
             if nargin > 1
-                MEF = obj.minEnvFlow(doy, 1);
+                MEF = obj.minEnvFlow(cday, 1);
             else
                 MEF = obj.minEnvFlow;
             end
         end
         
         %function obj = setTailWater
-        
-        %% virtual stuff in c++
-        function a = level2surface(obj, h)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            a = 0;
-        end
-        
-        function s = level2storage(obj, h, p)
-            %METHOD1 Summary of this method goes here
-            %   Detailed explanation goes here
-            s = 0;
-        end
-        
-        function h = storage2level(obj, s, p)
-            
-           h = 0;
-        end
-        
+                
     end
 end
 

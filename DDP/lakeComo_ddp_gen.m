@@ -2,6 +2,7 @@ period = (datetime(1999, 1, 1):datetime(2019, 12, 31))';
 isLeapDay = period.Month==2 & period.Day== 29;
 period( isLeapDay ) = [];
 n_t = length(period);
+doy = myDOY( period );
 %load inflow
 e = historical{period, "dis24"};
 
@@ -10,10 +11,10 @@ e = historical{period, "dis24"};
 h_flo = 1.10;
 % dmv rain_weight H values
 load( fullfile( raw_data_root, 'utils', 'DMV_99_19_noLD.txt' ), '-ascii' );
-mef = array2timetable( DMV_99_19_noLD, 'RowTimes', period, 'VariableNames', {'dis24'} );
+mef = DMV_99_19_noLD;
 clear DMV_99_19_noLD
 load( fullfile( raw_data_root, 'utils', 'rain_weight_99_19_noLD.txt' ), '-ascii' );
-rw = array2timetable( rain_weight_99_19_noLD, 'RowTimes', period, 'VariableNames', {'rw'} );
+rw = rain_weight_99_19_noLD;
 clear rain_weight_99_19_noLD
 % demand, s_low -365values
 load( fullfile( raw_data_root, 'utils', 'comoDemand.txt' ), '-ascii' );
@@ -44,11 +45,11 @@ n_s = length(discr_s);
 
 %discr u (release) u will be the history
 V = LakeComo.max_release( discr_s );
-v = LakeComo.min_release( discr_s, period, 0 );
+v = LakeComo.min_release( discr_s, 1:n_t, 0 );
 discr_u = unique( [V(:); v(:)] );
 clear V v
 %now I may want to fill the gaps
-discr_u = [discr_u; (22:5:161)'];
+discr_u = [discr_u; (27:5:161)'];
 discr_u = sort( discr_u );
 n_u = length( discr_u );
 %% OPTIMIZATION
@@ -63,28 +64,28 @@ H = nan( n_s, n_t+1, n_j);
 yy = 1;
 n_t_end = 365*yy; % just 2019
 weights = weights_b* diag( yy./[1, 365, 1] );
-tt = datetime;
+tic;
 for k = 1:n_j
     k
     H( :, end, k) = (weights(k, :)*vertcat( J{1}.evaluate( discr_h ), ...
         zeros( 1, n_s), ...
-        J{3}.evaluate( discr_h, period(end)+1 )))';
+        J{3}.evaluate( discr_h, myDOY(period(end)+1 )) ) )';
     
     for t = n_t:-1:n_t-n_t_end+1
         for i = 1 : n_s
             % get release
-            R = LakeComo.actual_release( discr_u, discr_s(i), period(t), 0);
+            S_ = nan( n_u, 1 );
+            R_ = nan( n_u, 1 );
+            for j = 1:n_u
+                [S_(j), R_(j)] = LakeComo.integration( 1, [], discr_s(i), discr_u(j), e(t), t, 0, 0);
+            end
             
             % compute G
             h_ = discr_h(i)*ones( 1, n_u );
             G = (weights(k, :)*vertcat( J{1}.evaluate( h_ ), ...
-                J{2}.evaluate( R', period(t) ), ...
-                J{3}.evaluate( h_ , period(t) ) ) )';
-            
-            S_ = nan( n_u, 1 );
-            for j = 1:n_u
-                S_(j) = LakeComo.integration( 1, [], discr_s(i), R(j), e(t), period(t), 0, 0);
-            end
+                J{2}.evaluate( R_', t, doy(t) ), ...
+                J{3}.evaluate( h_ , doy(t) ) ) )';
+          
             H_ = interp1( discr_s', H(:,t+1, k), S_ );
             
             % compute
@@ -95,8 +96,7 @@ for k = 1:n_j
         
     end
 end
-disp('elapsed time');
-disp( hours( datetime- tt ) )
+toc
 Hred = H(:, 7301:end, :);
 
 clear G Q H_ S_ h_ R k t i tt
@@ -114,13 +114,13 @@ for k = 1:3
 
 for t = 1:n_t_end
 % get release
-R = LakeComo.actual_release( discr_u, sim_s(t, k), period(t+q_t), 0);
+R = LakeComo.actual_release( discr_u, sim_s(t, k), t+q_t, 0);
 
 % compute G
 s_ = sim_s(t, k)*ones( size( discr_u ) )';
 G = (weights(k, :)*vertcat( J{1}.evaluate( LakeComo.storage2level( s_  ) ), ...
-    J{2}.evaluate( R', period(t) ), ...
-    J{3}.evaluate( LakeComo.storage2level( s_ ), period(t) ) ) )';
+    J{2}.evaluate( R', t, doy(t) ), ...
+    J{3}.evaluate( LakeComo.storage2level( s_ ), doy(t) ) ) )';
 
 S_ = nan( size( G ) );
 for j = 1:n_u

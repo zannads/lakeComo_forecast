@@ -21,18 +21,11 @@ classdef objFunction
                 if isscalar( param )
                     outputArg = param;
                     return;
-                elseif isvector(param) & any( size(param) == 365 )
-                    if size(param, 1) > size(param, 2)
-                        outputArg = param;
-                    else
-                        outputArg = param';
-                        return;
-                    end
+                elseif isvector(param) 
+                    outputArg = param(:); % verticalize
                 else
                     error( 'objFunction:bad input');
                 end
-            elseif istimetable( param ) & ~isempty( param )
-                outputArg = param;
             else
                 error( 'objFunction:bad input');
             end
