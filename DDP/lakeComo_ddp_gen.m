@@ -46,6 +46,7 @@ n_s = length(discr_s);
 V = LakeComo.max_release( discr_s );
 v = LakeComo.min_release( discr_s, period, 0 );
 discr_u = unique( [V(:); v(:)] );
+clear V v
 %now I may want to fill the gaps
 discr_u = [discr_u; (22:5:161)'];
 discr_u = sort( discr_u );
@@ -65,23 +66,22 @@ weights = weights_b* diag( yy./[1, 365, 1] );
 tt = datetime;
 for k = 1:n_j
     k
-    H( :, end, k) = (weights(k, :)*vertcat( J{1}.evaluate( LakeComo.storage2level( discr_s ) ), ...
-        zeros( size(discr_s) ), ...
-        J{3}.evaluate( LakeComo.storage2level( discr_s ), period(end)+1 )))';
+    H( :, end, k) = (weights(k, :)*vertcat( J{1}.evaluate( discr_h ), ...
+        zeros( 1, n_s), ...
+        J{3}.evaluate( discr_h, period(end)+1 )))';
     
     for t = n_t:-1:n_t-n_t_end+1
-        disp(t)
         for i = 1 : n_s
             % get release
             R = LakeComo.actual_release( discr_u, discr_s(i), period(t), 0);
             
             % compute G
-            s_ = discr_s(i)*ones( size( discr_u ) )';
-            G = (weights(k, :)*vertcat( J{1}.evaluate( LakeComo.storage2level( s_  ) ), ...
+            h_ = discr_h(i)*ones( 1, n_u );
+            G = (weights(k, :)*vertcat( J{1}.evaluate( h_ ), ...
                 J{2}.evaluate( R', period(t) ), ...
-                J{3}.evaluate( LakeComo.storage2level( s_ ), period(t) ) ) )';
+                J{3}.evaluate( h_ , period(t) ) ) )';
             
-            S_ = nan( size( G ) );
+            S_ = nan( n_u, 1 );
             for j = 1:n_u
                 S_(j) = LakeComo.integration( 1, [], discr_s(i), R(j), e(t), period(t), 0, 0);
             end
@@ -89,7 +89,7 @@ for k = 1:n_j
             
             % compute
             Q = G+H_;
-            [H( i,t, k), ~] = min(Q);
+            H( i,t, k) = min(Q);
             
         end
         
@@ -97,6 +97,9 @@ for k = 1:n_j
 end
 disp('elapsed time');
 disp( hours( datetime- tt ) )
+Hred = H(:, 7301:end, :);
+
+clear G Q H_ S_ h_ R k t i tt
 %% SIMULATION
 % do simulation
 t = n_t-n_t_end;
@@ -137,4 +140,4 @@ end
 
 end
 
-plot(sim_s)
+clear G Q H_ S_ s_ R k t i tt idx_u RR
