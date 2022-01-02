@@ -28,6 +28,14 @@ classdef floodDays < objFunction
             
             outputArg = sum(  double( h > obj.h_flo ), 1, 'omitnan' );
         end
+        
+        function outputArg = norm_eval(obj, h)
+            %METHOD1 Summary of this method goes here
+            %   Detailed explanation goes here
+            
+            outputArg = sum(  double( h > obj.h_flo ), 1, 'omitnan' );
+            outputArg = obj.normalize( outputArg );
+        end
     end
 end
 
