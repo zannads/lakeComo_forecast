@@ -81,9 +81,10 @@ classdef lakeComo < lake
             idx = 33.37*((h0+0.1+2.5).^2.015);
             m = idx/0.1;
             it = -m*h0;
+            q_ = repmat( m*h(:, h > h0 &  h<= h0+0.1) +it, n_t, 1);
             
             q(:,  h <= h0) = 0;
-            q(:,  h > h0 &  h<= h0+0.1) = repmat( m*h(:, h > h0 &  h<= h0+0.1) +it, n_t, 1);
+            q(:,  h > h0 &  h<= h0+0.1) = max(q_, obj.minEnvFlow(cday, 1) );
             q(:, h >  h0+0.1) =  repmat( 33.37* (h( :, h>h0+0.1)+2.5).^2.015, n_t, 1);
         end
     end
