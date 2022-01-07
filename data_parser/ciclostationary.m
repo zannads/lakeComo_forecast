@@ -1,7 +1,7 @@
 function ciclo = ciclostationary( historical )
 
 %%
-if ~strcmp( class(historical), class(timetable) ) 
+if ~istimetable( historical )
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be a Time Series object.' );
 end
@@ -22,21 +22,14 @@ Time = historical.Time( ~isLeapDay );
 
 %% ciclostationary mean calculation
 n_days = length( stream );
-ciclo = zeros(365, 1);
+ciclo = zeros(365, 2);
 for idx = 1:365
-   ciclo( idx ) = mean( stream( idx:365:n_days ) );
+   pf = fitdist( stream( idx:365:n_days ), 'Normal' );
+   ciclo( idx, 1 ) = pf.mu;
+   ciclo( idx, 2 ) = pf.sigma^2;
 end
 
-ciclo = timetable( Time(1:365), ciclo );
-ciclo.Properties.VariableNames{1} = 'dis24';
+ciclo = array2timetable( ciclo, 'RowTimes', Time(1:365), 'VariableNames', {'dis24', 'var24'} );
 ciclo = sortrows( ciclo );
 
 end
-
-%estraggo ogni singolo anno 
-% riduco gli anni bisestili
-% shifto tutti avanti fino all ultimo anno 
-% interseco ottnendo tante colonne quanti anni
-% riduco mediando tutte le colonne
-% ricostruisco con la time series iniziale e se c'è il giorno bisestile uso
-% il giorno prima

@@ -2,7 +2,7 @@
 clear detForecast 
 %Using the import tool, data is saved as
 % deterministic_forecast 
-deterministic_forecast  = readtable( fullfile( raw_data_root, 'Short_term_forecast', 'forecast_progea_postProcManzoni.xlsx' ) );
+deterministic_forecast  = readtable( fullfile( raw_data_root, 'PROGEA', 'forecast_progea_postProcManzoni.xlsx' ) );
 deterministic_forecast = renamevars( deterministic_forecast, ...
     deterministic_forecast.Properties.VariableNames, ...
     {'historical', 'lead1', 'lead2', 'lead3', 'subs'} );
@@ -19,13 +19,14 @@ deterministic_forecast = renamevars( deterministic_forecast, ...
 
 % first day is 29 May 2014
 first_day = datetime( 2014, 05, 29 );
+time = (0:size( deterministic_forecast, 1)-1)' + first_day;
 % lastday is 08 October 2020
+% I need to add 1 day to format it to the forecast way i.e. the first value
+% has to be Lead0.
+time = time+1;
+data = deterministic_forecast{:, 2:4};
+detForecast = forecast( time, data, ...
+        'LeadTime', 3, 'EnsembleNumber', 1, 'Benchmark', false, ...
+        'Name', "PROGEA" );
 
-% create the class
-detForecast = timetable( deterministic_forecast.lead1, deterministic_forecast.lead2, deterministic_forecast.lead3, 'TimeStep', days(1) );
-detForecast.Properties.StartTime = first_day;
-detForecast.Properties.VariableNames = {'Lead1', 'Lead2', 'Lead3' };
-
-detFScores = detScores( [1, 3, 9] ); % 1 for aggregartion time, 3 for lead times, 9 benchmarks
-
-clear deterministic_forecast first_day
+clear deterministic_forecast first_day time data

@@ -16,20 +16,22 @@ if size( ciclo, 1 )~= 365
 end
 
 %%
-outputArg = zeros( size(tseries, 1), 1 );
+outputArg = zeros( size(tseries, 1), 2 );
 for idx = 1:size(tseries, 1)
     [y, m, d] = ymd( tseries(idx) );
     
     if mod(y, 4) == 0 & m==2 & d==29
         % if leap day use 28th of february and 1st march
-        outputArg(idx) = mean( ...
+        outputArg(idx, 1) = mean( ...
             [ciclo.dis24( ciclo.Time.Month == 2 & ciclo.Time.Day == 28 );
             ciclo.dis24( ciclo.Time.Month == 3 & ciclo.Time.Day == 1 )]...
             );
+        outputArg(idx, 2) = ciclo.var24( ciclo.Time.Month == 2 & ciclo.Time.Day == 28 );
     else
-        outputArg(idx) = ciclo.dis24( ciclo.Time.Month == m & ciclo.Time.Day == d );
+        outputArg(idx, 1) = ciclo.dis24( ciclo.Time.Month == m & ciclo.Time.Day == d );
+        outputArg(idx, 2) = ciclo.var24( ciclo.Time.Month == m & ciclo.Time.Day == d );
     end
 end
 
-outputArg = timetable( outputArg, 'RowTimes', tseries, 'VariableNames', {'dis24'} );
+outputArg = array2timetable( outputArg, 'RowTimes', tseries, 'VariableNames', {'dis24', 'var24'} );
 end

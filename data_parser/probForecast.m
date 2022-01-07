@@ -160,7 +160,7 @@ classdef probForecast
             %object.
             %   It's interesting to study the first and the average
             %   ensamble of the probabilistic forecast. This are the only
-            %   two available methods.s
+            %   two available methods.
             
             %%parse input
             if strcmp( method, 'first' )

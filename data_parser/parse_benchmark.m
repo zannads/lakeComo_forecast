@@ -1,12 +1,14 @@
 % parse_benchmark
-clear historical averageDetForecast cicloDetForecast conDetForecast h hAgg
+clear historical averageForecast cicloForecast conForecast
 %%
 
 fid = fopen( fullfile( raw_data_root, 'utils', 'Lake_Como_Data_1946_2019.txt' ) );
 tline = string.empty;
 %delete first row as it is only info.
 fgetl(fid);
+% read data
 while ~feof(fid)
+    % I don't know the lenght at priori
 tline(end+1, :) = fgetl(fid); %#ok<SAGROW>
 end
 fclose(fid);
@@ -19,68 +21,57 @@ historical = array2timetable( h, 'RowTimes', t, ...
     'VariableNames', {'h', 'r', 'dis24'} );
 
 clear h t tline fid 
-
-qAgg = aggregate_historical(historical(DT_S:historical.Time(end), "dis24"), std_aggregation );    
-
 %% help 
-l = length( historical.Time);
-l_agg = length( std_aggregation );
+time = historical.Time(historical.Time>= DT_S);
+n_t = length( time );
 names = strcat( "agg_", string( std_aggregation) );
+
+%% inflow aggregation
+qAgg = aggregate_historical(time, historical.dis24(historical.Time>= DT_S), std_aggregation );
+qAgg = array2timetable( qAgg, 'RowTimes', time,'VariableNames', names );
+
 %% AVERAGE
+% repeat the same value everywhere and use it over all lead times.
+data = mean( historical.dis24 )*ones( n_t, 1 );
 
-% repeat the same value everywhere
-value = mean( historical.dis24 );
-aggSeries = repmat( value, l,   l_agg);
-
-averageDetForecast = array2timetable(aggSeries, ...
-    'RowTimes', historical.Time, 'VariableNames', names );
+averageForecast = forecast( time, data, ...
+        'LeadTime', inf, 'EnsembleNumber', 1, 'Benchmark', true, ...
+        'Name', "average" );
 
 %% CICLOSTATIONARY
-
-cs = moving_average( historical  ); %filter noise
+%cs = moving_average( historical  ); %filter noise
+cs = historical( :, "dis24" );       %not noise filtered
 cs = ciclostationary( cs  ); %get one realization(365 d) of ciclostationary mean
 
-% get a time series starting from historical.
-b = cicloseriesGenerator( cs, [historical.Time; (historical.Time(end):caldays(1):historical.Time(end)+calyears(1))'] );
-                
-aggSeries = zeros( l, l_agg );
-for aggT = 1:l_agg
-    for tdx = 1:l
-        tr = timerange( b.Time(tdx), b.Time(tdx)+std_aggregation(aggT) );
-        c = b(tr, 1);
-        
-        aggSeries( tdx, aggT ) = mean( c.(1) );
-    end
-end
+% get a time series starting from historical. 
+cs = cicloseriesGenerator( cs, time );
+data = cat(3, cs.dis24, cs.var24 );
 
-cicloDetForecast = array2timetable(aggSeries, ...
-    'RowTimes', historical.Time, 'VariableNames', names );
+cicloForecast = forecast( time, data, ...
+    'LeadTime', nan, 'EnsembleNumber', inf, 'Benchmark', true, ...
+        'Name', "ciclostationary" );
 
                 
 %% consistency
-con_step = [caldays([1; 3; 7; 14; 21]); calmonths(1)];
-names = strcat( "ave_", string( con_step ) );
+con_step = [1; 3; 7; 30]; %days
+names = strcat( "ave_", string( con_step ), "d" );
+conForecast(length(con_step)) = forecast;
 
 % I start from a ciclostationary, so that where I can't
 % fill I use ciclostationary mean already.
-aggSeries = repmat( cicloDetForecast.agg_1d, 1, length(con_step ) );
 for aggT = 1:length(con_step)
-    %for consistency you use the last agg_time elements, so I
-    %search where to start.
-    st_date = historical.Time(1)+con_step(aggT);
-    st_idx = find(historical.Time == st_date, 1, 'first');
     
+    h = historical.dis24( historical.Time >= time(1)-con_step( aggT ) );
+    data = nan( n_t, 1);
     
-    % move from st_idx to the end.
-    jdx = 1;
-    for idx = st_idx:l
-        t = historical.(1);
-        aggSeries(idx, aggT) = mean( t(jdx:idx-1) );
-        jdx = jdx+1;
+    for idx = 1:n_t
+        data( idx, :) = mean( h( (1:con_step(aggT))+idx-1 ) );
     end
+    
+    conForecast( aggT ) = forecast( time, data, ...
+        'LeadTime', inf, 'EnsembleNumber', 1, 'Benchmark', true, ...
+        'Name', names( aggT ) );
 end
 
-conDetForecast = array2timetable(aggSeries, ...
-    'RowTimes', historical.Time, 'VariableNames', names );
-
-clear aggSeries jdx idx st_idx aggT l l_agg names cs b c st_date tdx tr value t con_step
+%%
+clear aggT con_step cs data h idx n_t names time
