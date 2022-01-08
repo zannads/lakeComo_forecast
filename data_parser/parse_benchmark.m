@@ -39,8 +39,8 @@ averageForecast = forecast( time, data, ...
         'Name', "average" );
 
 %% CICLOSTATIONARY
-%cs = moving_average( historical  ); %filter noise
-cs = historical( :, "dis24" );       %not noise filtered
+cs = moving_average( historical  ); %filter noise
+%cs = historical( :, "dis24" );       %not noise filtered
 cs = ciclostationary( cs  ); %get one realization(365 d) of ciclostationary mean
 
 % get a time series starting from historical. 

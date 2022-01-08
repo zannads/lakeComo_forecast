@@ -147,6 +147,26 @@ classdef forecast
             outputArg.ensembleN = 1;
         end
         
+        function outputArg = plot( obj, aggTime, step, varargin )
+            %plot creates a figure and plot all the ensembles of the
+            %probabilistic forecast.
+            %   f = plot(probForecast, agg_time, lead_time ) creates a plot
+            %   with a time step of agg_time days and lead time of
+            %   lead_time day.
+            
+            if nargin >1 & any( strcmp( varargin, 'Figure' ) )
+                idx = find( strcmp( varargin, 'Figure' ), 1, 'first');
+                outputArg = varargin{idx+1};
+                varargin(idx:idx+1) = [];
+            else
+                outputArg = figure;
+            end
+           
+            t = obj.getTimeSeries( aggTime, step );
+            plot( t.Time, t.Variables, varargin{:} );
+            
+        end
+        
     end
     
     methods ( Access = private )

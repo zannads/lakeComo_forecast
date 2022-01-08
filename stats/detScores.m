@@ -1,3 +1,0 @@
-function outputArg = detScores( s )
-outputArg = struct( 'kge',nan( s ), 'r',nan( s ), 'alpha',nan( s ),...
-    'beta',nan( s ), 'kge_mod',nan( s ), 'gamma',nan( s ), 'nse',nan( s ), 've',nan( s ));

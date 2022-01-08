@@ -1,5 +1,4 @@
 %LOAD PROBABILISTIC FORECAST
-locations = [Fuentes, Mandello, LakeComo, Olginate];
 % lets start with extended range: efrf
 efrfForecast = upload('efrf', locations );
 
@@ -107,6 +106,6 @@ for loc = 1:n_l
     
     obj(loc) = forecast( time, data, ...
         'LeadTime', leadTime, 'EnsembleNumber', ensembleN, 'Benchmark', false, ...
-        'Name', string(location.fname) );
+        'Name', location(loc).fname );
 end
 end
