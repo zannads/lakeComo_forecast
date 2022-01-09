@@ -38,30 +38,39 @@ classdef brier_score
                 f_( isnan(f_(:,1)), :) = [];
                 o_( isnan(o_(:,1)), :) = [];
                 
-                n = size( f_, 1);    % n number of forecast issued /  lenght of the forecast period.
-                d_bar = sum( o_, 1 )/n; % average
-                
-                % following the paper from Murphy we see that the forecast can
-                % assume a discrete set of values.
-                % r is the collection of the different values.
-                % d is the average of the observations for the corresponding r.
-                % k is the number of times that value appeared  in the whole
-                % timehistory, sum k = 1.
-                [r, d, k] = brier_score.decompose( f_, o_ );
-                
-                % Brier score accordingly to Brier 1950.
-                bs = sum( (f_-o_).^2 , 'all')/n;
-                % Decomposition accordingly to Murhpy 1973.
-                rel = 1/n*k'*diag((r-d)*(r-d)');
-                res = 1/n*k'*diag((d-d_bar)*(d-d_bar)');
-                unc = d_bar*( ones(size(d_bar)) - d_bar)';
-                
-                outputArg.bs(mdx) = bs;
-                outputArg.rel(mdx) = rel;
-                outputArg.res(mdx) = res;
-                outputArg.unc(mdx) = unc;
-                outputArg.type = brier_score.type;
+                if ~isempty(f_) & ~isempty(o_)
+                    
+                    n = size( f_, 1);    % n number of forecast issued /  lenght of the forecast period.
+                    d_bar = sum( o_, 1 )/n; % average
+                    
+                    % following the paper from Murphy we see that the forecast can
+                    % assume a discrete set of values.
+                    % r is the collection of the different values.
+                    % d is the average of the observations for the corresponding r.
+                    % k is the number of times that value appeared  in the whole
+                    % timehistory, sum k = 1.
+                    [r, d, k] = brier_score.decompose( f_, o_ );
+                    
+                    % Brier score accordingly to Brier 1950.
+                    bs = sum( (f_-o_).^2 , 'all')/n;
+                    % Decomposition accordingly to Murhpy 1973.
+                    rel = 1/n*k'*diag((r-d)*(r-d)');
+                    res = 1/n*k'*diag((d-d_bar)*(d-d_bar)');
+                    unc = d_bar*( ones(size(d_bar)) - d_bar)';
+                    
+                    outputArg.bs(mdx) = bs;
+                    outputArg.rel(mdx) = rel;
+                    outputArg.res(mdx) = res;
+                    outputArg.unc(mdx) = unc;
+                    
+                else
+                    outputArg.bs(mdx) = nan;
+                    outputArg.rel(mdx) = nan;
+                    outputArg.res(mdx) = nan;
+                    outputArg.unc(mdx) = nan;
+                end
             end
+            outputArg.type = brier_score.type;
         end
         
         function outputArg = type( varargin )

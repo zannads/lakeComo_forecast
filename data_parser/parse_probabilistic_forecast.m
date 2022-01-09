@@ -1,11 +1,11 @@
 %LOAD PROBABILISTIC FORECAST
 % lets start with extended range: efrf
 efrfForecast = upload('efrf', locations );
-
+%%
 % now its time for seasonal: efsr
 efsrForecast = upload( 'efsr', locations );
 
-%uploadOLD
+%% uploadOLD
 %{
 function obj = uploadOLD( type, location)
 %UPLOAD uploads from the folder the EFAS forecast of one of the
@@ -63,7 +63,7 @@ end
 obj.daysN = size( obj.data{1}, 1 );
 end
 %}
-
+%% uploadNEW
 function obj = upload( type, location)
 %UPLOAD uploads from the folder the EFAS forecast of one of the
 %two types: efrf or efsr.
@@ -82,6 +82,7 @@ for loc = 1:n_l
     
     % get the number of ensambles.
     raw_data = ncread( fullfile( list_element(1).folder, list_element(1).name ), dis );
+    raw_data = squeeze( raw_data );
     ensembleN = size(raw_data, 2);
     
     % get the lead times. dis24 is the discharge in the last 24 hours, thus the
