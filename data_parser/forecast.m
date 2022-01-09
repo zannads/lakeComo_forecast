@@ -59,37 +59,48 @@ classdef forecast
         function outputArg = getTimeSeries( obj, aggTime, step )
             
             %%input check
-            
-            %%calculations
-            if isinf( obj.leadTime )
-                % the same value is for all lead times, i.e. I only need to
-                % move the dates.
-                
-                processedValues = obj.data;
-                processedTime = obj.time+(step-1)*aggTime;
-            elseif isnan( obj.leadTime )
-                % the value is perfectly known.. no lead time but
-                % aggregation is needed
-                % anyway it can still be a probabilistic desc or with
-                % ensembles or deterministic with only one
-                processedTime = obj.time;
-                
-                if isinf( obj.ensembleN )
-                    processedValues(:,1) = aggregate_historical( obj.time, obj.data(:,1,1), aggTime );
-                    processedValues(:,2) = aggregate_var( obj, aggTime );
+
+            tt = cell(1, length(obj) );
+            for idx = 1:length(obj)
+                %%calculations
+                if isinf( obj(idx).leadTime )
+                    % the same value is for all lead times, i.e. I only need to
+                    % move the dates.
+                    
+                    processedValues = obj(idx).data;
+                    processedTime = obj(idx).time+(step-1)*aggTime;
+                elseif isnan( obj(idx).leadTime )
+                    % the value is perfectly known.. no lead time but
+                    % aggregation is needed
+                    % anyway it can still be a probabilistic desc or with
+                    % ensembles or deterministic with only one
+                    processedTime = obj(idx).time;
+                    
+                    if isinf( obj(idx).ensembleN )
+                        processedValues(:,1) = aggregate_historical( obj(idx).time, obj(idx).data(:,1,1), aggTime );
+                        processedValues(:,2) = aggregate_var( obj(idx), aggTime );
+                    else
+                        processedValues = squeeze( aggregate_historical( obj(idx).time, obj(idx).data(:,1,:), aggTime ) );
+                    end
                 else
-                    processedValues = squeeze( aggregate_historical( obj.time, obj.data(:,1,:), aggTime ) );
+                    
+                    if isinf( obj(idx).ensembleN )
+                        %not implemented
+                    else
+                        [processedValues, processedTime] = aggregate_unknown( obj(idx), aggTime, step );
+                    end
                 end
-            else
-                
-                if isinf( obj.ensembleN )
-                    %not implemented
+
+                if obj(idx).ensembleN == 1
+                    names = obj(idx).name;
                 else
-                    [processedValues, processedTime] = aggregate_unknown( obj, aggTime, step );
+                    names = strcat( obj(idx).name, "_", string(1:obj(idx).ensembleN) );
                 end
+                
+                tt{idx} = array2timetable( processedValues, 'RowTimes', processedTime, 'VariableNames', names );
             end
-            
-            outputArg = array2timetable( processedValues, 'RowTimes', processedTime );
+
+            outputArg = synchronize( tt{:}, 'intersection' );
         end
         
         function outputArg = valid_agg_time( obj, agg_times)
@@ -161,7 +172,7 @@ classdef forecast
             else
                 outputArg = figure;
             end
-           
+            
             t = obj.getTimeSeries( aggTime, step );
             plot( t.Time, t.Variables, varargin{:} );
             

@@ -1,11 +1,10 @@
 %% KGE PROGEA
 aT = std_aggregation( detForecast.valid_agg_time( std_aggregation ) );
 sTmax = detForecast.max_step( aT );
-cicloDetForecast = cicloForecast.prob2det( 'average' );
+benchmark = [averageForecast, cicloForecast.prob2det( 'average' ), conForecast];
 
 % det
-signalsnames = [detForecast.name, averageForecast.name, cicloForecast.name, ...
-    cat(2, conForecast.name )];
+signalsnames = [detForecast.name, cat(2, benchmark.name )];
 scoresnames = {'kge', 'r', 'alpha', 'beta', 'kge_mod', 'gamma', 'nse', 've'};
 PROGEADetScores = table('Size', [length(scoresnames), length(signalsnames)], ...
     'VariableTypes', repmat("cell", 1, length(signalsnames) ),...
@@ -22,21 +21,19 @@ PROGEADetScores.Properties.CustomProperties.agg_times = aT;
 %% aggregation time : 1 day
 for aggT = 1:length(aT)
     w = strcat( "agg_", string( aT(aggT) ) );
+    
+    % obs
     obs = qAgg(:, w);
-    obs = obs( ~isnan(obs{:,1}), 1);
+    oNan = isnan(obs.(1));
+    obs = obs( ~oNan, 1);
+    obs.Properties.VariableNames = "observation";
+    
     for sT = 1:sTmax(aggT)
         df = detForecast.getTimeSeries( aT(aggT), sT );
         
-        ave = averageForecast.getTimeSeries( aT(aggT), sT );
-        cic = cicloDetForecast.getTimeSeries( aT(aggT), sT );
-        con1 = conForecast(1).getTimeSeries( aT(aggT), sT );
-        con2 = conForecast(2).getTimeSeries( aT(aggT), sT );
-        con3 = conForecast(3).getTimeSeries( aT(aggT), sT );
-        con4 = conForecast(4).getTimeSeries( aT(aggT), sT );
+        bT =  benchmark.getTimeSeries( aT(aggT), sT);
         
-        matchedData = synchronize( obs, df, ave, cic, con1, con2, con3, con4,'intersection' );
-        
-        matchedData.Properties.VariableNames = ["observation", signalsnames];
+        matchedData = synchronize( obs, df, bT,'intersection' );
         
         for ref = 1:length(signalsnames)
             p = KGE( matchedData(:, signalsnames(ref)), matchedData(:, "observation"), 'Standard' );
@@ -59,5 +56,5 @@ for aggT = 1:length(aT)
 end
 
 %%
-clear aggT aT ave cic cicloDetForecast con1 con2 con3 con4 df w
-clear idx jdx matchedData obs p ref scoresnames signalsnames sT sTmax t
+clear aggT aT ave cic cicloDetForecast con1 con2 con3 con4 df w bT
+clear idx jdx matchedData obs p ref scoresnames signalsnames sT sTmax t oNan

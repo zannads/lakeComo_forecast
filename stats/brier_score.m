@@ -27,6 +27,8 @@ classdef brier_score
             end
             
             m = size( f, 3 );
+            outputArg = brier_score.empty( m );
+            
             for mdx = 1:m
                 %% calculate
                 % go along 3rd direction
@@ -138,7 +140,7 @@ classdef brier_score
             
             if strcmp( brier_score.type, 'annual' )
                 %% ANNUAL
-               tercile(1, :) = quantile( reshape(tt.Variables, 1, []), quant );
+                tercile(1, :) = quantile( reshape(tt.Variables, 1, []), quant );
                 
             elseif strcmp( brier_score.type, 'seasonal' )
                 %% SEASONAL
@@ -178,7 +180,7 @@ classdef brier_score
                             datetime( year, mon, 1 )+calmonths(1) ) ;    %end date
                         h = [ h; tt(month, :) ];
                     end
-                     
+                    
                     if ~isempty(h)
                         tercile(mon, :) = quantile( reshape(h.Variables, 1, []), quant );
                     end
@@ -208,11 +210,11 @@ classdef brier_score
             
             %% dec
             temp = signal.Variables;
-                
+            
             %if strcmp( brier_score.type, 'annual' )
-                % ANNUAL 
-                % no change needed
-                
+            % ANNUAL
+            % no change needed
+            
             if strcmp( brier_score.type, 'seasonal' )
                 %% seasonal
                 temp_m = repmat(cell(1), 1, 1, 4);
@@ -222,27 +224,27 @@ classdef brier_score
                 seas = 1; % before spring begin
                 fy = signal.Time.Year(1); % first year
                 sd = [21, 3; 21, 6; 23, 9; 21, 12; 21, 3]; % days that separate seasons
-                while ~isempty( temp ) 
+                while ~isempty( temp )
                     % get the array pos before the change of the season
-                    per = time_ < datetime(fy, sd(seas, 2), sd(seas, 1)); 
+                    per = time_ < datetime(fy, sd(seas, 2), sd(seas, 1));
                     
                     % append the element of that season to the relative
-                    % season, I should use seas-1. 
+                    % season, I should use seas-1.
                     if seas ~= 1
-                        temp_m{seas-1} = [temp_m{seas-1}; temp( per, : )]; 
+                        temp_m{seas-1} = [temp_m{seas-1}; temp( per, : )];
                     else
                         % I can't index with 0, winter is 4
-                        temp_m{4} = [temp_m{4}; temp( per, : )]; 
+                        temp_m{4} = [temp_m{4}; temp( per, : )];
                     end
                     
-                     % remove the used period
-                    time_(per, :) = [];   
+                    % remove the used period
+                    time_(per, :) = [];
                     temp( per, :) = [];
                     
                     % go to next season
                     if seas <4
                         seas = seas+1;
-                    else 
+                    else
                         seas = 1;
                         % again to spring, change year
                         fy = fy +1;
@@ -401,6 +403,21 @@ classdef brier_score
             end
         end
         
+        function outputArg = empty( m )
+            if nargin
+                outputArg.bs = nan(1,m);
+                outputArg.rel = nan(1,m);
+                outputArg.res = nan(1,m);
+                outputArg.unc = nan(1,m);
+                outputArg.type = "";
+            else
+                outputArg.bs = [];
+                outputArg.rel = [];
+                outputArg.res = [];
+                outputArg.unc = [];
+                outputArg.type = "";
+            end
+        end
     end
 end
 

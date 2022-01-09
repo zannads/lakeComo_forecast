@@ -1,19 +1,19 @@
 %% PROB
 %%
-a = figure;
+h2015_efrf_1d = figure;
 plot( historical.Time, historical.dis24 , 'k', 'LineWidth', 1.75);
 hold on
-efrfForecast.plot( 'Figure', a);
+efrfForecast(2).plot(caldays(1), 1, 'Figure', h2015_efrf_1d);
 xlim( [datetime(2015,1,1), datetime(2015, 12, 31) ]);
 ylim( [0, 700]);
 xlabel('Time');
 ylabel('dis_{24} [m^{3}/{s}]', 'FontSize', 14)
 title( "Lead1", 'FontSize', 14 );
 
-a = figure;
-plot( hAgg.Time(hAgg.Time.Day==1), hAgg.agg_1mo(hAgg.Time.Day==1) , 'k', 'LineWidth', 1.75);
+h2015_efrf_1mo = figure;
+plot( qAgg.Time(qAgg.Time.Day==1), qAgg.agg_1mo(qAgg.Time.Day==1) , 'k', 'LineWidth', 1.75);
 hold on
-efrfForecast.plot( 'Figure', a, 'AggTime', calmonths(1))
+efrfForecast(2).plot(calmonths(1), 1, 'Figure', h2015_efrf_1mo)
 xlim( [datetime(2015,1,1), datetime(2018, 12, 31) ]);
 ylim( [0, 500]);
 xlabel('Time');
@@ -114,7 +114,7 @@ colororder( [colors.det;colors.det;colors.det;colors.det;...
     colors.ave; colors.cic; colors.con] )
 %plot( [1,length(aT)], [1, 1], '-');
 hold on;
-for idx = 1:size( efrfProbScores, 2)-6
+for idx = 1:6
     plot( 1:length(aT), efrfProbScores{"crps", idx}{1}(:,1), 'LineWidth', 2, 'Marker', markpos{idx});
 end
 title( 'CRPS', 'FontSize', 18 );
@@ -128,8 +128,9 @@ colororder( [colors.det;colors.det;colors.det;colors.det;...
     colors.ave; colors.cic; colors.con] )
 %plot( [1,length(aT)], [1, 1], '-');
 hold on;
-for idx = 1:size( efrfProbScores, 2)-6
-    plot( 1:length(aT), efrfProbScores{"bs_annual_1/3_2/3", idx}{1}(:,1), 'LineWidth', 2, 'Marker', markpos{idx});
+for idx = 1:6
+    score = cat(1,efrfProbScores{"bs_1", idx}{1}(:,1).bs);
+    plot( 1:length(aT), score, 'LineWidth', 2, 'Marker', markpos{idx});
 end
 title( 'BS', 'FontSize', 18 );
 xlabel( 'Aggregation time', 'FontSize', 14 );
@@ -147,8 +148,9 @@ for jdx = 1:4
         colors.ave; colors.cic; colors.con] )
     %plot( [1,length(aT)], [1, 1], '-');
     hold on;
-    for idx = 1:size( efrfProbScores, 2)-6
-        plot( 1:length(aT), efrfProbScores{"bs_seasonal_1/3_2/3", idx}{1}(:,1,jdx), 'LineWidth', 2, 'Marker', markpos{idx});
+    for idx = 1:6
+        score = cat(1,efrfProbScores{"bs_2", idx}{1}(:,1).bs);
+        plot( 1:length(aT), score(:, jdx) , 'LineWidth', 2, 'Marker', markpos{idx});
     end
     title( strcat("BS ", seas{jdx}), 'FontSize', 18 );
     xlabel( 'Aggregation time', 'FontSize', 14 );
@@ -168,8 +170,9 @@ for jdx = 1:4
         colors.ave; colors.cic; colors.con] )
     %plot( [1,length(aT)], [1, 1], '-');
     hold on;
-    for idx = 1:size( efrfProbScores, 2)-6
-        plot( 1:length(aT), efrfProbScores{"bs_seasonal_1/3_2/3ub", idx}{1}(:,1,jdx), 'LineWidth', 2, 'Marker', markpos{idx});
+    for idx = 1:6
+        score = cat(1,efrfProbScores{"bs_4", idx}{1}(:,1).bs);
+        plot( 1:length(aT), score(:, jdx), 'LineWidth', 2, 'Marker', markpos{idx});
     end
     title( strcat("BS ", seas{jdx}), 'FontSize', 18 );
     xlabel( 'Aggregation time', 'FontSize', 14 );
@@ -190,8 +193,9 @@ for jdx = 1:4
         colors.ave; colors.cic; colors.con] )
     %plot( [1,length(aT)], [1, 1], '-');
     hold on;
-    for idx = 1:size( efrfProbScores, 2)-6
-        plot( 1:length(aT), efrfProbScores{"bs_seasonal_1/20ub", idx}{1}(:,1,jdx), 'LineWidth', 2, 'Marker', markpos{idx});
+    for idx = 1:6
+        score = cat(1,efrfProbScores{"bs_6", idx}{1}(:,1).bs);
+        plot( 1:length(aT), score(:,jdx), 'LineWidth', 2, 'Marker', markpos{idx});
     end
     title( strcat("BS ", seas{jdx}), 'FontSize', 18 );
     xlabel( 'Aggregation time', 'FontSize', 14 );

@@ -1,14 +1,20 @@
 %% efrs
-bN = 1+1+6;
-posV = {'LakeComo', 'Fuentes', 'Mandello', 'Olginate'};
-aT = std_aggregation( efrfForecast.valid_agg_time( std_aggregation ) );
-%aT( aT== caldays(28) ) = [];
-aT(6) = [];
+aT = std_aggregation( efrfForecast(1).valid_agg_time( std_aggregation ) );
+sTmax = efrfForecast(1).max_step( aT );
+efrfDetForecast( 8 ) = forecast;
+
+for idx = 1:4
+    efrfDetForecast(idx*2-1) = efrfForecast(idx).prob2det( 'average' );
+    efrfDetForecast(idx*2-1).name = strcat( efrfDetForecast(idx*2-1).name, "_ave" );
+    
+    efrfDetForecast(idx*2) = efrfForecast(idx).prob2det( 'first' );
+    efrfDetForecast(idx*2).name = strcat( efrfDetForecast(idx*2).name, "_first" );
+end
+
+benchmark = [averageForecast, cicloForecast.prob2det( 'average' ), conForecast];
 
 %% det
-signalsnames = [{'Fuentes_ave', 'Fuentes_first', 'Mandello_ave', 'Mandello_first',...
-    'LakeComo_ave', 'LakeComo_first', 'Olginate_ave', 'Olginate_first', ...
-    'average', 'ciclostationary'}, conDetForecast.Properties.VariableNames];
+signalsnames = [cat(2, efrfDetForecast.name), cat(2, benchmark.name) ];
 scoresnames = {'kge', 'r', 'alpha', 'beta', 'kge_mod', 'gamma', 'nse', 've'};
 efrfDetScores = table('Size', [length(scoresnames), length(signalsnames)], ...
     'VariableTypes', repmat("cell", 1, length(signalsnames) ),...
@@ -23,215 +29,45 @@ efrfDetScores = addprop(efrfDetScores, 'agg_times', 'table');
 efrfDetScores.Properties.CustomProperties.agg_times = aT;
 
 %%
-pos = [{'LakeComo_ave', 'LakeComo_first', 'average', 'ciclostationary'}, conDetForecast.Properties.VariableNames];
-efrfForecast = efrfForecast.upload( 'efrf', eval( posV{1} ) );
 for aggT = 1:length(aT)
     aT(aggT)
     w = strcat( "agg_", string( aT(aggT) ) );
-    % sim
-    s_1 = efrfForecast.aggregate( aT(aggT), 'Which', 'average' );
-    s_2 = efrfForecast.aggregate( aT(aggT), 'Which', 'first' );
-    % benchmarks
-    ave = averageDetForecast(:, w);
-    cic = cicloDetForecast(:, w );
-    con = conDetForecast;
+    
     % obs
-    o = hAgg(:, w );
-    oNan = isnan(o.(1));
-    o = o(~oNan, :);
+    obs = qAgg(:, w);
+    oNan = isnan(obs.(1));
+    obs = obs( ~oNan, 1);
+    obs.Properties.VariableNames = "observation";
     
-    for lT = 1:width(s_1)
-        disp(lT);
+    for sT = 1:sTmax(aggT)
         
-        matchedData = synchronize( s_1(:,lT), s_2(:,lT), con, 'intersection' );
-        matchedData = extractLT( matchedData, lT-1 );
+        df = efrfDetForecast.getTimeSeries( aT(aggT), sT );
         
-        matchedData = synchronize(o, matchedData(:, 1:2), ave, cic, matchedData(:,3:end), 'intersection' );
+        bT =  benchmark.getTimeSeries( aT(aggT), sT);
         
-        matchedData.Properties.VariableNames(1:5) = {'observation', 'sim_ave', 'sim_first', 'average', 'ciclo'};
+        matchedData = synchronize( obs, df, bT,'intersection' );
         
-        for ref = 1:size( matchedData, 2 )-1
-            p = KGE( matchedData(:, ref+1), matchedData(:, 'observation'), 'Standard' );
-            efrfDetScores{'kge', pos(ref)}{1}(aggT, lT) = p.kge;
-            efrfDetScores{'r', pos(ref)}{1}(aggT, lT) = p.r;
-            efrfDetScores{'alpha', pos(ref)}{1}(aggT, lT) = p.alpha;
-            efrfDetScores{'beta', pos(ref)}{1}(aggT, lT) = p.beta;
+        for ref = 1:length(signalsnames)
+            p = KGE( matchedData(:, signalsnames(ref)), matchedData(:, "observation"), 'Standard' );
+            efrfDetScores{"kge", signalsnames(ref)}{1}(aggT, sT) = p.kge;
+            efrfDetScores{"r", signalsnames(ref)}{1}(aggT, sT) = p.r;
+            efrfDetScores{"alpha", signalsnames(ref)}{1}(aggT, sT) = p.alpha;
+            efrfDetScores{"beta", signalsnames(ref)}{1}(aggT, sT) = p.beta;
             
-            p = KGE( matchedData(:, ref+1), matchedData(:, 'observation'), 'Modified' );
-            efrfDetScores{'kge_mod', pos(ref)}{1}(aggT, lT) = p.kge;
-            efrfDetScores{'gamma', pos(ref)}{1}(aggT, lT) = p.gamma;
+            p = KGE( matchedData(:, signalsnames(ref)), matchedData(:, "observation"), 'Modified' );
+            efrfDetScores{"kge_mod", signalsnames(ref)}{1}(aggT, sT) = p.kge;
+            efrfDetScores{"gamma", signalsnames(ref)}{1}(aggT, sT) = p.gamma;
             
-            p = NSE( matchedData(:, ref+1), matchedData(:, 'observation') );
-            efrfDetScores{'nse', pos(ref)}{1}(aggT, lT) = p.nse;
+            p = NSE( matchedData(:, signalsnames(ref)), matchedData(:, "observation") );
+            efrfDetScores{"nse", signalsnames(ref)}{1}(aggT, sT) = p.nse;
             
-            efrfDetScores{'ve', pos(ref)}{1}(aggT, lT)  = VE( matchedData(:, ref+1), matchedData(:, 'observation') );
+            efrfDetScores{"ve", signalsnames(ref)}{1}(aggT, sT) = ...
+                VE( matchedData(:, signalsnames(ref)), matchedData(:, "observation") );
         end
     end
 end
-%% other positions
-pos = {'Fuentes_ave', 'Fuentes_first', 'Mandello_ave', 'Mandello_first',...
-    'Olginate_ave', 'Olginate_first'};
-for where = 2:4
-    posV{where}
-    efrfForecast = efrfForecast.upload( 'efrf', eval( posV{where} ) );
-    
-    for aggT = 1:length(aT)
-        aT(aggT)
-        w = strcat( "agg_", string( aT(aggT) ) );
-        % sim
-        s_1 = efrfForecast.aggregate( aT(aggT), 'Which', 'average' );
-        s_2 = efrfForecast.aggregate( aT(aggT), 'Which', 'first' );
-        % benchmarks
-        %not needed
-        
-        % obs
-        o = hAgg(:, w );
-        oNan = isnan(o.(1));
-        o = o(~oNan, :);
-        
-        for lT = 1:width(s_1)
-            disp(lT);
-            
-            matchedData = synchronize( s_1(:,lT), s_2(:,lT), 'intersection' );
-            matchedData = extractLT( matchedData, lT-1 );
-            
-            matchedData = synchronize(o, matchedData(:, 1:2), 'intersection');
-            
-            matchedData.Properties.VariableNames(1:3) = {'observation', 'sim_ave', 'sim_first'};
-            
-            for ref = 1:size( matchedData, 2 )-1 % should be 2
-                q = (where-2)*2+ref;
-                pos(q)
-                p = KGE( matchedData(:, ref+1), matchedData(:, 'observation'), 'Standard' );
-                efrfDetScores{'kge', pos(q)}{1}(aggT, lT) = p.kge;
-                efrfDetScores{'r', pos(q)}{1}(aggT, lT) = p.r;
-                efrfDetScores{'alpha', pos(q)}{1}(aggT, lT) = p.alpha;
-                efrfDetScores{'beta', pos(q)}{1}(aggT, lT) = p.beta;
-                
-                p = KGE( matchedData(:, ref+1), matchedData(:, 'observation'), 'Modified' );
-                efrfDetScores{'kge_mod', pos(q)}{1}(aggT, lT) = p.kge;
-                efrfDetScores{'gamma', pos(q)}{1}(aggT, lT) = p.gamma;
-                
-                p = NSE( matchedData(:, ref+1), matchedData(:, 'observation') );
-                efrfDetScores{'nse', pos(q)}{1}(aggT, lT) = p.nse;
-                
-                efrfDetScores{'ve', pos(q)}{1}(aggT, lT)  = VE( matchedData(:, ref+1), matchedData(:, 'observation') );
-            end
-        end
-    end
-end
-
 
 %% prob
-signalsnames = [{'Fuentes', 'Mandello', 'LakeComo', 'Olginate', 'average', 'ciclostationary'}, conDetForecast.Properties.VariableNames];
-scoresnames = {'crps', ...
-    'bs_annual_1/3_2/3', 'rel_annual_1/3_2/3', 'res_annual_1/3_2/3', 'unc_annual_1/3_2/3', ...
-    'bs_seasonal_1/3_2/3', 'rel_seasonal_1/3_2/3', 'res_seasonal_1/3_2/3', 'unc_seasonal_1/3_2/3', ...
-    'bs_monthly_1/3_2/3', 'rel_monthly_1/3_2/3', 'res_monthly_1/3_2/3', 'unc_monthly_1/3_2/3', ...
-    'bs_seasonal_1/3_2/3ub', 'rel_seasonal_1/3_2/3ub', 'res_seasonal_1/3_2/3ub', 'unc_seasonal_1/3_2/3ub',...
-    'bs_seasonal_1/20ub', 'rel_seasonal_1/20ub', 'res_seasonal_1/20ub', 'unc_seasonal_1/20ub', ...
-    'bs_seasonal_1/10ub', 'rel_seasonal_1/10ub', 'res_seasonal_1/10ub', 'unc_seasonal_1/10ub', ...
-    'bs_seasonal_9/10ub', 'rel_seasonal_9/10ub', 'res_seasonal_9/10ub', 'unc_seasonal_9/10ub', ...
-    'bs_seasonal_19/20ub', 'rel_seasonal_19/20ub', 'res_seasonal_19/20ub', 'unc_seasonal_19/20ub'};
-efrfProbScores = table('Size', [length(scoresnames), length(signalsnames)], ...
-    'VariableTypes', repmat("cell", 1, 12),...
-    'VariableNames', signalsnames, 'RowNames', scoresnames, ...
-    'DimensionNames', {'Scores', 'Signals'});
-for idx = 1:5
-    for jdx = 1:length(signalsnames)
-        efrfProbScores{idx,jdx}{1} = nan(length(aT),7);
-    end
-end
-for idx = 6:9
-    for jdx = 1:length(signalsnames)
-        efrfProbScores{idx,jdx}{1} = nan(length(aT),7, 4);
-    end
-end
-for idx = 10:13
-    for jdx = 1:length(signalsnames)
-        efrfProbScores{idx,jdx}{1} = nan(length(aT),7, 12);
-    end
-end
-for idx = 14:33
-    for jdx = 1:length(signalsnames)
-        efrfProbScores{idx,jdx}{1} = nan(length(aT),7, 4);
-    end
-end
-efrfProbScores = addprop(efrfProbScores, 'agg_times', 'table');
-efrfProbScores.Properties.CustomProperties.agg_times = aT;
-
-%% crps
-efrfForecast = efrfForecast.upload( 'efrf', eval( posV{1} ) );
-for aggT = 1:length(aT)
-    aT(aggT)
-    w = strcat( "agg_", string( aT(aggT) ) );
-    
-    % sim
-    s_1 = efrfForecast.aggregate( aT(aggT), 'Which', 'all' );
-    % benchmarks
-    ave = averageDetForecast(:, w);
-    cic = cicloDetForecast(:, w );
-    con = conDetForecast;
-    % obs
-    o = hAgg(:, w );
-    oNan = isnan(o.(1));
-    o = o(~oNan, :);
-    
-    for lT = 1:s_1.leadTime
-        disp(lT)
-        s = compress( s_1, 'LeadTime', lT );
-        en = size( s, 2);
-        
-        matchedData = synchronize( s, con, 'intersection' );
-        matchedData = extractLT( matchedData, lT-1 );
-        
-        matchedData = synchronize(o, matchedData(:, 1:en), ave, cic, matchedData(:,(en+1):end), 'intersection' );
-        %matchedData = [{'observation'}, s.Properties.VariableNames,
-        %{'average', 'ciclostationary'}];
-        
-
-        efrfProbScores{'crps', 'LakeComo'}{1}(aggT,lT) = ...
-            crps( matchedData(:, (1:en)+1).Variables, matchedData(:,1).Variables);
-        for ref = 1:bN
-            efrfProbScores{'crps', ref+4}{1}(aggT,lT) = ...
-                MAE( matchedData(:, ref+en+1), matchedData(:,1));
-        end
-        
-    end
-end
-%% other pos
-for where = 2:4
-    efrfForecast = efrfForecast.upload( 'efrf', eval( posV{where} ) );
-    for aggT = 1:length(aT)
-        aT(aggT)
-        w = strcat( "agg_", string( aT(aggT) ) );
-        
-        % sim
-        s_1 = efrfForecast.aggregate( aT(aggT), 'Which', 'all' );
-        % benchmarks
-        
-        
-        % obs
-        o = hAgg(:, w );
-        oNan = isnan(o.(1));
-        o = o(~oNan, :);
-        
-        for lT = 1:s_1.leadTime
-            disp(lT)
-            s = compress( s_1, 'LeadTime', lT );
-            en = size( s, 2);
-            
-            s = extractLT( s, lT-1 );
-            
-            matchedData = synchronize(o, s, 'intersection' );
-            
-            efrfProbScores{'crps', posV{where}}{1}(aggT,lT) = ...
-                crps( matchedData(:, (1:en)+1).Variables, matchedData(:,1).Variables);
-            
-        end
-    end
-end
-%% bs
 bs_settings(1).type = 'annual';
 bs_settings(1).bias = true;
 bs_settings(1).quant = [1/3, 2/3];
@@ -263,137 +99,129 @@ bs_settings(7).quant = 9/10;
 bs_settings(8).type = 'seasonal';
 bs_settings(8).bias = false;
 bs_settings(8).quant = 19/20;
+for idx = 1:length(bs_settings)
+bs_settings(idx).name = "bs_" + string(idx);
+end
 
+signalsnames = [cat(2, efrfForecast.name), cat(2, benchmark.name) ];
+scoresnames = ["crps", cat(2, bs_settings.name)];
+    
+efrfProbScores = table('Size', [length(scoresnames), length(signalsnames)], ...
+    'VariableTypes', repmat("cell", 1, length(signalsnames)),...
+    'VariableNames', signalsnames, 'RowNames', scoresnames, ...
+    'DimensionNames', {'Scores', 'Signals'});
+for jdx = 1:length(signalsnames)
+    efrfProbScores{1,jdx}{1} = nan(length(aT),7);
+end
 
-efrfForecast = efrfForecast.upload( 'efrf', eval( posV{1} ) );
+for idx = 2:length( scoresnames )
+    for jdx = 1:length(signalsnames)
+        efrfProbScores{idx,jdx}{1} = repmat( brier_score.empty, length(aT),7);
+    end
+end
+efrfProbScores = addprop(efrfProbScores, 'agg_times', 'table');
+efrfProbScores.Properties.CustomProperties.agg_times = aT;
 
+%% crps
+signals = [efrfForecast, benchmark];
 for aggT = 1:length(aT)
     aT(aggT)
     w = strcat( "agg_", string( aT(aggT) ) );
     
-    % sim
-    s_1 = efrfForecast.aggregate( aT(aggT), 'Which', 'all' );
-    % benchmarks
-    ave = averageDetForecast(:, w);
-    cic = cicloDetForecast(:, w );
-    con = conDetForecast;
     % obs
-    o = hAgg(:, w );
-    oNan = isnan(o.(1));
-    o = o(~oNan, :);
+    obs = qAgg(:, w);
+    oNan = isnan(obs.(1));
+    obs = obs( ~oNan, 1);
+    obs.Properties.VariableNames = "observation";
     
-    for stg =  1:length( bs_settings)
+    for sT = 1:sTmax(aggT)
         
-        brier_score.type( bs_settings(stg).type )
+        df = getTimeSeries( signals, aT(aggT), sT);
         
+        matchedData = synchronize( obs, df,'intersection' );
         
-        for lT = 1:s_1.leadTime
-            disp(lT)
-            s = compress( s_1, 'LeadTime', lT );
-            en = size( s, 2);
+        for ref = 1:length(signalsnames)
             
-            matchedData = synchronize( s, con, 'intersection' );
-            matchedData = extractLT( matchedData, lT-1 );
-            
-            matchedData = synchronize(o, matchedData(:, 1:en), ave, cic, matchedData(:,(en+1):end), 'intersection' );
-            %matchedData = [{'observation'}, s.Properties.VariableNames,
-            %{'average', 'ciclostationary'}];
-            
-            brier_score.boundaries( brier_score.extract_bounds( o, bs_settings(stg).quant ) );
-            
-            obs = brier_score.parse( matchedData(:,1) );
-            
-            for ref = 1:bN
-                fore = brier_score.parse( matchedData(:, 1+en+ref) );
-                p = brier_score.calculate(fore, obs);
+            if signals(ref).ensembleN >1
+                %get an array of matching names,
+                pos_ = strfind( matchedData.Properties.VariableNames', signalsnames(ref) );
+                % it is a cell array I need to conver it to logical
+                pos = false( size(pos_) );
+                for k = 1:length(pos)
+                    pos(k) = ~isempty( pos_{k} );
+                end
                 
-                efrfProbScores{(stg-1)*4+2, ref+4}{1}(aggT, lT, :) = ...
-                    p.bs;
-                efrfProbScores{(stg-1)*4+3, ref+4}{1}(aggT, lT, :) = ...
-                    p.rel;
-                efrfProbScores{(stg-1)*4+4, ref+4}{1}(aggT, lT, :) = ...
-                    p.res;
-                efrfProbScores{(stg-1)*4+5, ref+4}{1}(aggT, lT, :) = ...
-                    p.unc;
+                % crps needs double array not timetables.
+                efrfProbScores{"crps", signalsnames(ref)}{1}(aggT,sT) = ...
+                    crps( matchedData{:, pos}, matchedData{:, "observation"} );
                 
+            elseif signals(ref).ensembleN == 1
+                
+                efrfProbScores{"crps", signalsnames(ref)}{1}(aggT,sT) = ...
+                    MAE( matchedData(:, signalsnames(ref)), matchedData(:,"observation"));
             end
-            
-            if ~bs_settings(stg).bias
-                %reset quantile
-                brier_score.boundaries( brier_score.extract_bounds( matchedData(:, (1:en)+1), bs_settings(stg).quant ) );
-            end
-            fore = brier_score.parse( matchedData(:, (1:en)+1) );
-            p = brier_score.calculate(fore, obs);
-            
-            efrfProbScores{(stg-1)*4+2, 'LakeComo'}{1}(aggT, lT, :) = ...
-                    p.bs;
-                efrfProbScores{(stg-1)*4+3, 'LakeComo'}{1}(aggT, lT, :) = ...
-                    p.rel;
-                efrfProbScores{(stg-1)*4+4, 'LakeComo'}{1}(aggT, lT, :) = ...
-                    p.res;
-                efrfProbScores{(stg-1)*4+5, 'LakeComo'}{1}(aggT, lT, :) = ...
-                    p.unc;
         end
+        
     end
-    
 end
 
-%%
-for where = 2:4
-    efrfForecast = efrfForecast.upload( 'efrf', eval( posV{where} ) );
+
+
+%% bs
+for aggT = 1:length(aT)
+    aT(aggT)
+    w = strcat( "agg_", string( aT(aggT) ) );
     
-    for aggT = 1:length(aT)
-        aT(aggT)
-        w = strcat( "agg_", string( aT(aggT) ) );
+    % obs
+    obs = qAgg(:, w);
+    oNan = isnan(obs.(1));
+    obs = obs( ~oNan, 1);
+    obs.Properties.VariableNames = "observation";
+    
+    for sT = 1:sTmax(aggT)
         
-        % sim
-        s_1 = efrfForecast.aggregate( aT(aggT), 'Which', 'all' );
-        % benchmarks
+        df = getTimeSeries( signals, aT(aggT), sT);
         
-        % obs
-        o = hAgg(:, w );
-        oNan = isnan(o.(1));
-        o = o(~oNan, :);
+        matchedData = synchronize( obs, df,'intersection' );
         
         for stg =  1:length( bs_settings)
             
             brier_score.type( bs_settings(stg).type )
             
+            brier_score.boundaries( brier_score.extract_bounds( matchedData(:, "observation"), bs_settings(stg).quant ) );
             
-            for lT = 1:s_1.leadTime
-                disp(lT)
-                s = compress( s_1, 'LeadTime', lT );
-                en = size( s, 2);
-                
-                s = extractLT( s, lT-1 );
-                
-                matchedData = synchronize(o, s, 'intersection' );
-                
-                brier_score.boundaries( brier_score.extract_bounds( o, bs_settings(stg).quant ) );
+            obs_e = brier_score.parse( matchedData(:, "observation") );
             
-                obs = brier_score.parse( matchedData(:,1) );
+            for ref = 5:length(signalsnames)
+                for_e = brier_score.parse( matchedData(:, signalsnames(ref) ) );
+                p = brier_score.calculate(for_e, obs_e);
+                
+                efrfProbScores{bs_settings(stg).name, signalsnames(ref)}{1}(aggT, sT) = p;
+            end
+            
+            for ref = 1:4
+                %get an array of matching names,
+                pos_ = strfind( matchedData.Properties.VariableNames', signalsnames(ref) );
+                % it is a cell array I need to conver it to logical
+                pos = false( size(pos_) );
+                for k = 1:length(pos)
+                    pos(k) = ~isempty( pos_{k} );
+                end
                 
                 if ~bs_settings(stg).bias
                     %reset quantile
-                    brier_score.boundaries( brier_score.extract_bounds( matchedData(:, (1:en)+1), bs_settings(stg).quant ) );
+                    brier_score.boundaries( brier_score.extract_bounds( matchedData(:, pos), bs_settings(stg).quant ) );
                 end
-                fore = brier_score.parse( matchedData(:, (1:en)+1) );
-                p = brier_score.calculate(fore, obs);
-                
-                efrfProbScores{(stg-1)*4+2, posV{where}}{1}(aggT, lT, :) = ...
-                    p.bs;
-                efrfProbScores{(stg-1)*4+3, posV{where}}{1}(aggT, lT, :) = ...
-                    p.rel;
-                efrfProbScores{(stg-1)*4+4, posV{where}}{1}(aggT, lT, :) = ...
-                    p.res;
-                efrfProbScores{(stg-1)*4+5, posV{where}}{1}(aggT, lT, :) = ...
-                    p.unc;
+                for_e = brier_score.parse( matchedData(:, pos) );
+                p = brier_score.calculate(for_e, obs_e);
+
+                efrfProbScores{bs_settings(stg).name, signalsnames(ref)}{1}(aggT, sT) = p;
             end
         end
-        
     end
+    
 end
-
-%% 
-clear p fore bs_settings stg where posV pos aggT lT obs matchedData s s_1 s_2
-clear o oNan w en ave cic con signalsnames scoresnames bN aT idx jdx q ref
+%%
+clear aggT aT bT df for_e idx jdx k matchedData obs obs_e oNan p pos pos_ 
+clear ref scoresnames signals signalsnames sT stg sTmax w
+clear efrfDetForecast
