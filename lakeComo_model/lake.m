@@ -71,7 +71,7 @@ classdef lake
         function r = actual_release(obj,  uu, s, cday, p)
            
             r = min( obj.max_release( s, cday, p), max( ...
-                obj.min_release( s, cday, p), uu ) );
+                obj.min_release( s, cday, p), reshape(uu, 1, 1, []) ) );
             
         end
         
