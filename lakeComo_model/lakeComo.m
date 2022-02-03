@@ -54,8 +54,16 @@ classdef lakeComo < lake
             h0 = -0.4 + p;
             q = nan( n_t, n_s );
             
+            % linear part of max release
+            idx = 33.37*((h0+0.1+2.5).^2.015);
+            m = idx/0.1;
+            it = -m*h0;
+            q_ = repmat( m*h(:, h > h0 &  h<= 1.10) +it, n_t, 1);
+            
             q(:,  h <= h0) = 0;
-            q(:, h>h0 &  h <= 1.10) = DMV*ones(1, size(h(h>h0 &  h <= 1.10), 2) );
+            
+            %min between MEF and LINE
+            q(:, h>h0 &  h <= 1.10) = min(q_, DMV*ones(1, size(h(h>h0 &  h <= 1.10), 2) ));
             q(:, h > 1.10) = repmat(33.37* (h(:, h > 1.10) +2.5).^2.015, n_t, 1);
             
         end
@@ -81,10 +89,9 @@ classdef lakeComo < lake
             idx = 33.37*((h0+0.1+2.5).^2.015);
             m = idx/0.1;
             it = -m*h0;
-            q_ = repmat( m*h(:, h > h0 &  h<= h0+0.1) +it, n_t, 1);
             
             q(:,  h <= h0) = 0;
-            q(:,  h > h0 &  h<= h0+0.1) = max(q_, obj.minEnvFlow(cday, 1) );
+            q(:,  h > h0 &  h<= h0+0.1) = repmat( m*h(:, h > h0 &  h<= h0+0.1) +it, n_t, 1);
             q(:, h >  h0+0.1) =  repmat( 33.37* (h( :, h>h0+0.1)+2.5).^2.015, n_t, 1);
         end
     end
