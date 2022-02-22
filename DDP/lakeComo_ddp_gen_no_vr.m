@@ -15,7 +15,8 @@ for t = n_t:-1:+1
     
     % get release
     % 1 x n_s x n_u
-    R_ = R(t, :, :);
+    %R_ = R(t, :, :);
+    R_ = LakeComo.actual_release( discr_u, discr_s, t, 0);
     % 1 x n_s + ( 1 - 1 x n_s x n_u ) = 1 x n_s x n_u
     S_ = discr_s + (e(t) - R_)*60*60*24;
     

@@ -24,20 +24,19 @@ h_flo = 1.1;
 % mef = min( mef, e);     % italian legislation defines mef as minimum between the value and the availabilityy, that in this case is the measured inflow
 % or 
 load( fullfile( raw_data_root, 'utils', 'DMV_99_19_LD_it.txt' ), '-ascii' );
-mef = DMV_99_19_LD_it(1:n_t);
+DMV_99_19_LD_it = timetable( (datetime(1999, 1, 1):datetime(2019, 12, 31))', DMV_99_19_LD_it );
+mef = DMV_99_19_LD_it{period, "DMV_99_19_LD_it"};
 clear DMV_99_19_LD_it;
-% load( fullfile( raw_data_root, 'utils', 'DMV_99_19_noLD.txt' ), '-ascii' );
-% mef = DMV_99_19_noLD(1:n_t);
-% clear DMV_99_19_noLD;
 
 % rw will be used as deficit^(2-rw)
-% rw = ones(n_t,1);           %abs value during the year: deficit^(2-1)
-% rw( doy>91 & doy<=283 ) = 0;%squared during summer:     deficit^(2-0)
+rw = ones(n_t,1);           %abs value during the year: deficit^(2-1)
+rw( doy>91 & doy<=283 ) = 0;%squared during summer:     deficit^(2-0)
 % rw = rw-1;
 % or 
-load( fullfile( raw_data_root, 'utils', 'rain_weight_99_19_LD.txt' ), '-ascii' );
-rw = rain_weight_99_19_LD(1:n_t);
-clear rain_weight_99_19_LD;
+% load( fullfile( raw_data_root, 'utils', 'rain_weight_99_19_LD.txt' ), '-ascii' );
+% rain_weight_99_19_LD = timetable( (datetime(1999, 1, 1):datetime(2019, 12, 31))', rain_weight_99_19_LD );
+% rw = rain_weight_99_19_LD{period, "rain_weight_99_19_LD"};
+% clear rain_weight_99_19_LD;
 
 % demand, s_low -365values
 load( fullfile( raw_data_root, 'utils', 'comoDemand.txt' ), '-ascii' );
@@ -75,36 +74,36 @@ discr_u = unique( [V(:); v(:)] );
 clear V v
 %now I may want to fill the gaps in the most relevant part: 22-230 is
 %between MEF and max(comoDemand)
-eps1 = 2.5;
-discr_u = [discr_u; (22+eps1:eps1:230)'];
+eps1 = .5;
+discr_u = [discr_u; (0+eps1:eps1:230)'];
 discr_u = sort( discr_u );
 n_u = length( discr_u );
 clear eps1
 % get available release as func of t and s and e
 % R : n_t x n_s x n_u
-R = LakeComo.actual_release( discr_u, discr_s, 1:n_t, 0);
+%R = LakeComo.actual_release( discr_u, discr_s, 1:n_t, 0);
 %{ 
 make R unique, since for some value of discr_s, we can have only 1 value,
 (for example below h = -0.4 the only possible value is 0) 
 it doesn't make sense to have that value n_u times in 3 dim. If I replace
 the multiples with NaN speed will increase.
 %}
-tic
-rem = 0;
-for idx = 1:n_t
-    for jdx = 1:n_s
-        [RR, ia, ic] = unique( R(idx, jdx, :) );
-        rem = rem + n_u - length(RR);
-        
-        for mdx = 1:length(ia)
-            ic( discr_u == R(idx,jdx,ia(mdx)) ) = 0;
-        end
-        R(idx, jdx, ic>0 ) = nan;
-    end
-end
-toc
-fprintf( "Reduce of %d points. [%3.1f %%]\n", rem, rem/(n_s.*n_u.*n_t)*10 ) ;
-clear idx jdx ia ic RR rem mdx 
+% tic
+% rem = 0;
+% for idx = 1:n_t
+%     for jdx = 1:n_s
+%         [RR, ia, ic] = unique( R(idx, jdx, :) );
+%         rem = rem + n_u - length(RR);
+%         
+%         for mdx = 1:length(ia)
+%             ic( discr_u == R(idx,jdx,ia(mdx)) ) = 0;
+%         end
+%         R(idx, jdx, ic>0 ) = nan;
+%     end
+% end
+% toc
+% fprintf( "Reduce of %d points. [%3.1f %%]\n", rem, rem/(n_s.*n_u.*n_t)*10 ) ;
+% clear idx jdx ia ic RR rem mdx 
 
 %% WEIGHTS and normalization
 N = 15;
