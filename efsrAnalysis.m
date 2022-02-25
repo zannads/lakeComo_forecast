@@ -1,6 +1,6 @@
 %% efrs
 aT = std_aggregation( efsrForecast(1).valid_agg_time( std_aggregation ) );
-sTmax = efsrForecast(1).max_step( aT );
+lTmax = efsrForecast(1).max_leadTime( aT );
 efsrDetForecast( 8 ) = forecast;
 
 for idx = 1:4
@@ -22,7 +22,7 @@ efsrDetScores = table('Size', [length(scoresnames), length(signalsnames)], ...
     'DimensionNames', {'Score', 'Signal'});
 for idx = 1:length(scoresnames)
     for jdx = 1:length(signalsnames)
-        efsrDetScores{idx,jdx}{1} = nan(length(aT),7);
+        efsrDetScores{idx,jdx}{1} = nan(length(aT), max(lTmax)+1);
     end
 end
 efsrDetScores = addprop(efsrDetScores, 'agg_times', 'table');
@@ -39,13 +39,14 @@ for aggT = 1:length(aT)
     obs = obs( ~oNan, 1);
     obs.Properties.VariableNames = "observation";
     
-    for sT = 1:sTmax(aggT)
+    for sT = 1:lTmax(aggT)+1
+        lT = sT-1;
         
-        df = efsrDetForecast.getTimeSeries( aT(aggT), sT );
+        df = efsrDetForecast.getTimeSeries( aT(aggT), lT );
         
-        bT =  benchmark.getTimeSeries( aT(aggT), sT);
+        bf =  benchmark.getTimeSeries( aT(aggT), lT);
         
-        matchedData = synchronize( obs, df, bT,'intersection' );
+        matchedData = synchronize( obs, df, bf,'intersection' );
         
         for ref = 1:length(signalsnames)
             p = KGE( matchedData(:, signalsnames(ref)), matchedData(:, "observation"), 'Standard' );
@@ -111,12 +112,12 @@ efsrProbScores = table('Size', [length(scoresnames), length(signalsnames)], ...
     'VariableNames', signalsnames, 'RowNames', scoresnames, ...
     'DimensionNames', {'Scores', 'Signals'});
 for jdx = 1:length(signalsnames)
-    efsrProbScores{1,jdx}{1} = nan(length(aT),7);
+    efsrProbScores{1,jdx}{1} = nan(length(aT), max(lTmax)+1);
 end
 
 for idx = 2:length( scoresnames )
     for jdx = 1:length(signalsnames)
-        efsrProbScores{idx,jdx}{1} = repmat( brier_score.empty, length(aT),7);
+        efsrProbScores{idx,jdx}{1} = repmat( brier_score.empty, length(aT), max(lTmax)+1);
     end
 end
 efsrProbScores = addprop(efsrProbScores, 'agg_times', 'table');
@@ -134,9 +135,10 @@ for aggT = 1:length(aT)
     obs = obs( ~oNan, 1);
     obs.Properties.VariableNames = "observation";
     
-    for sT = 1:sTmax(aggT)
+    for sT = 1:lTmax(aggT)+1
+        lT = sT-1;
         
-        df = getTimeSeries( signals, aT(aggT), sT);
+        df = getTimeSeries( signals, aT(aggT), lT);
         
         matchedData = synchronize( obs, df,'intersection' );
         
@@ -178,9 +180,10 @@ for aggT = 1:length(aT)
     obs = obs( ~oNan, 1);
     obs.Properties.VariableNames = "observation";
     
-    for sT = 1:sTmax(aggT)
+    for sT = 1:lTmax(aggT)+1
+        lT = sT-1;
         
-        df = getTimeSeries( signals, aT(aggT), sT);
+        df = getTimeSeries( signals, aT(aggT), lT);
         
         matchedData = synchronize( obs, df,'intersection' );
         
@@ -222,6 +225,6 @@ for aggT = 1:length(aT)
     
 end
 %%
-clear aggT aT bT df for_e idx jdx k matchedData obs obs_e oNan p pos pos_ 
-clear ref scoresnames signals signalsnames sT stg sTmax w
+clear aggT aT bf df for_e idx jdx k matchedData obs obs_e oNan p pos pos_ 
+clear ref scoresnames signals signalsnames sT lT stg sTmax w
 clear efsrDetForecast

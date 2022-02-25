@@ -8,9 +8,9 @@ for idx = 1:3
 nexttile;
 plot(historical.Time, historical.dis24, 'LineWidth', 2);
 hold on;
-detForecast.plot(caldays(1), idx, 'Figure', hist2015, 'LineWidth', 2 );
-averageForecast.plot(caldays(1), idx, 'Figure', hist2015, '--', 'LineWidth', 0.75  );
-cicloDetForecast.plot(caldays(1), idx, 'Figure', hist2015, 'LineWidth', 0.75  );
+detForecast.plot(caldays(1), idx-1, 'Figure', hist2015, 'LineWidth', 2 );
+averageForecast.plot(caldays(1), idx-1, 'Figure', hist2015, '--', 'LineWidth', 0.75  );
+cicloDetForecast.plot(caldays(1), idx-1, 'Figure', hist2015, 'LineWidth', 0.75  );
 xlim( [datetime(2015,1,1), datetime(2015, 12, 31) ]);
 ylim( [0, 1060]);
 xlabel('Time');

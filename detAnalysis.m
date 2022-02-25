@@ -1,6 +1,6 @@
 %% KGE PROGEA
 aT = std_aggregation( detForecast.valid_agg_time( std_aggregation ) );
-sTmax = detForecast.max_step( aT );
+lTmax = detForecast.max_leadTime( aT );
 benchmark = [averageForecast, cicloForecast.prob2det( 'average' ), conForecast];
 
 % det
@@ -12,7 +12,7 @@ PROGEADetScores = table('Size', [length(scoresnames), length(signalsnames)], ...
     'DimensionNames', {'Score', 'Signal'});
 for idx = 1:length(scoresnames)
     for jdx = 1:length(signalsnames)
-        PROGEADetScores{idx,jdx}{1} = nan(length(aT), max(sTmax));
+        PROGEADetScores{idx,jdx}{1} = nan(length(aT), max(lTmax)+1);
     end
 end
 PROGEADetScores = addprop(PROGEADetScores, 'agg_times', 'table');
@@ -28,10 +28,11 @@ for aggT = 1:length(aT)
     obs = obs( ~oNan, 1);
     obs.Properties.VariableNames = "observation";
     
-    for sT = 1:sTmax(aggT)
-        df = detForecast.getTimeSeries( aT(aggT), sT );
+    for sT = 1:lTmax(aggT)+1
+        lT = sT-1;
+        df = detForecast.getTimeSeries( aT(aggT), lT );
         
-        bT =  benchmark.getTimeSeries( aT(aggT), sT);
+        bT =  benchmark.getTimeSeries( aT(aggT), lT);
         
         matchedData = synchronize( obs, df, bT,'intersection' );
         
@@ -57,4 +58,4 @@ end
 
 %%
 clear aggT aT ave cic cicloDetForecast con1 con2 con3 con4 df w bT
-clear idx jdx matchedData obs p ref scoresnames signalsnames sT sTmax t oNan
+clear idx jdx matchedData obs p ref scoresnames signalsnames sT lT lTmax t oNan

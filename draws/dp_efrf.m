@@ -3,7 +3,7 @@
 h2015_efrf_1d = figure;
 plot( historical.Time, historical.dis24 , 'k', 'LineWidth', 1.75);
 hold on
-efrfForecast(2).plot(caldays(1), 1, 'Figure', h2015_efrf_1d);
+efrfForecast(2).plot(caldays(1), 0, 'Figure', h2015_efrf_1d);
 xlim( [datetime(2015,1,1), datetime(2015, 12, 31) ]);
 ylim( [0, 700]);
 xlabel('Time');
@@ -13,7 +13,7 @@ title( "Lead1", 'FontSize', 14 );
 h2015_efrf_1mo = figure;
 plot( qAgg.Time(qAgg.Time.Day==1), qAgg.agg_1mo(qAgg.Time.Day==1) , 'k', 'LineWidth', 1.75);
 hold on
-efrfForecast(2).plot(calmonths(1), 1, 'Figure', h2015_efrf_1mo)
+efrfForecast(2).plot(calmonths(1), 0, 'Figure', h2015_efrf_1mo)
 xlim( [datetime(2015,1,1), datetime(2018, 12, 31) ]);
 ylim( [0, 500]);
 xlabel('Time');

@@ -3,7 +3,7 @@
 h2015_efsr_1d = figure;
 plot( historical.Time, historical.dis24 , 'k', 'LineWidth', 1.75);
 hold on
-efsrForecast(2).plot(caldays(1), 1, 'Figure', h2015_efsr_1d);
+efsrForecast(2).plot(caldays(1), 0, 'Figure', h2015_efsr_1d);
 xlim( [datetime(2015,1,1), datetime(2015, 12, 31) ]);
 ylim( [0, 700]);
 xlabel('Time');
@@ -11,9 +11,9 @@ ylabel('dis_{24} [m^{3}/{s}]', 'FontSize', 14)
 title( "Lead1", 'FontSize', 14 );
 
 h2015_efsr_1mo = figure;
-plot( qAgg.Time(qAgg.Time.Day==1), qAgg.agg_1mo(qAgg.Time.Day==1) , 'k', 'LineWidth', 1.75);
+plot( qAgg.Time, qAgg.agg_1mo , 'k', 'LineWidth', 1.75);
 hold on
-efsrForecast(2).plot(calmonths(1), 1, 'Figure', h2015_efsr_1mo)
+efsrForecast(2).plot(calmonths(1), 0, 'Figure', h2015_efsr_1mo)
 xlim( [datetime(2015,1,1), datetime(2018, 12, 31) ]);
 ylim( [0, 500]);
 xlabel('Time');
@@ -21,9 +21,9 @@ ylabel('monthly discharge [m^{3}/{s}]', 'FontSize', 14)
 title( "1 step ahead of monthly average discharge", 'FontSize', 14 );
 
 h2015_efsr_2mo = figure;
-plot( qAgg.Time(qAgg.Time.Day==1), qAgg.agg_1mo(qAgg.Time.Day==1) , 'k', 'LineWidth', 1.75);
+plot( qAgg.Time, qAgg.agg_2mo , 'k', 'LineWidth', 1.75);
 hold on
-efsrForecast(2).plot(calmonths(2), 1, 'Figure', h2015_efsr_2mo)
+efsrForecast(2).plot(calmonths(2), 0, 'Figure', h2015_efsr_2mo)
 xlim( [datetime(2015,1,1), datetime(2018, 12, 31) ]);
 ylim( [0, 500]);
 xlabel('Time');
@@ -129,7 +129,7 @@ zlabel( 'Correlation' );
 yticks( 1:length(aT));
 yticklabels( strcat("agg-", string(aT) ));
 ylabel( 'Agg Time');
-xticks( 1:7 )
+xticks( (1:size( efsrDetScores{"r",1}{1}, 2))-1 )
 xlabel( 'Step Ahead');
 legend( 'Fuentes', 'Mandello', 'LakeComo', 'Olginate' );
 
@@ -147,6 +147,7 @@ end
 title( 'CRPS', 'FontSize', 18 );
 xlabel( 'Aggregation time', 'FontSize', 14 );
 ylabel( 'CRPS', 'FontSize', 14 );
+xticks( 1:length(aT) )
 xticklabels( strcat("agg-", string(aT) ));
 grid on
 
@@ -164,6 +165,7 @@ title( 'BS', 'FontSize', 18 );
 xlabel( 'Aggregation time', 'FontSize', 14 );
 ylabel( 'BS', 'FontSize', 14 );
 ylim( [0, 2]);
+xticks( 1:length(aT) )
 xticklabels( strcat("agg-", string(aT) ));
 grid on
 
