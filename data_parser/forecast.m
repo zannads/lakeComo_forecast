@@ -56,9 +56,12 @@ classdef forecast
             obj.name = p.Results.Name;
         end
         
-        function outputArg = getTimeSeries( obj, aggTime, step )
+        function outputArg = getTimeSeries( obj, aggTime, leadTime, fill )
             
             %%input check
+            if nargin < 4
+                fill = false;
+            end
 
             tt = cell(1, length(obj) );
             for idx = 1:length(obj)
@@ -66,9 +69,10 @@ classdef forecast
                 if isinf( obj(idx).leadTime )
                     % the same value is for all lead times, i.e. I only need to
                     % move the dates.
+                    %it's given for granted that the time series is already dailybased
                     
                     processedValues = obj(idx).data;
-                    processedTime = obj(idx).time+(step-1)*aggTime;
+                    processedTime = obj(idx).time+leadTime;
                 elseif isnan( obj(idx).leadTime )
                     % the value is perfectly known.. no lead time but
                     % aggregation is needed
@@ -83,11 +87,13 @@ classdef forecast
                         processedValues = squeeze( aggregate_historical( obj(idx).time, obj(idx).data(:,1,:), aggTime ) );
                     end
                 else
+                    % obj.leadTime is a finite number
                     
                     if isinf( obj(idx).ensembleN )
                         %not implemented
                     else
-                        [processedValues, processedTime] = aggregate_unknown( obj(idx), aggTime, step );
+                        % probabilistic with ensemble or deterministic
+                        [processedValues, processedTime] = aggregate_unknown( obj(idx), aggTime, leadTime, fill );
                     end
                 end
 
@@ -111,31 +117,40 @@ classdef forecast
                 return;
             end
             
-            %it needs to be less then the lead time, the worst case is when
-            % the month is 31 days long for the monthly aggregation.
+            % get how long is the time to the next available date
+            gap_time = obj.time(2:end)-obj.time(1:end-1); 
+            gap_time = min(max( days(gap_time) )-1, obj.leadTime);
+            
+            %it needs to be less then the lead time minus gap_time, i.e when you need
+            %to fill some dates, the worst case is when the month is 31 days long for
+            %the monthly aggregation.
             outputArg = iscalendarduration(agg_times) & ...
-                (obj.leadTime >= ( split(agg_times,"days")+31*split(agg_times,"months") ) );
+                (obj.leadTime-gap_time>= ( split(agg_times,"days")+31*split(agg_times,"months") ) );
         end
+        %{
+        to change:
         
-        function outputArg = max_step( obj, agg_times )
-            %max_step extracts the maximum steap ahead for this couple
+        max_leadTime -> max_leadtime
+        given an aggregation time return how many days ahead you can actually go
+        with that. 
+        %}
+        function outputArg = max_leadTime( obj, agg_times )
+            %max_leadTime extracts the maximum steap ahead for this couple
             %Forecast - agg_time.
-            %   By design it can be maximum 7 anyway.
-            %get the maximum lead time, at most 7..
+            %   By design it can be maximum 15 anyway.
+            %get the maximum lead time, at most 15..
             if isinf(obj.leadTime) || isnan(obj.leadTime)
-                outputArg = 7;
+                outputArg = 15*ones(size(agg_times));
                 return;
             end
             
             agg_times = split(agg_times, "days") + 31*split(agg_times, "months");
-            outputArg = zeros( size(agg_times) );
             
             % get how long is the time to the next available date
-            gap_time = [obj.time(2:end)-obj.time(1:end-1); duration(24,0,0)];
-            gap_time = max( days(gap_time) );
+            gap_time = obj.time(2:end)-obj.time(1:end-1);
+            gap_time = min(max( days(gap_time) )-1, obj.leadTime);
             
-            outputArg( agg_times >= gap_time ) = min( floor( obj.leadTime          ./agg_times( agg_times >= gap_time ) ), 7);
-            outputArg( agg_times <  gap_time ) = min( floor((obj.leadTime-gap_time)./agg_times( agg_times <  gap_time ) ), 7);
+            outputArg = max(min( obj.leadTime-gap_time-agg_times, 15 ), 0);
         end
         
         function outputArg = prob2det( obj, method )
@@ -173,7 +188,7 @@ classdef forecast
                 outputArg = figure;
             end
             
-            t = obj.getTimeSeries( aggTime, step );
+            t = obj.getTimeSeries( aggTime, step, true );
             plot( t.Time, t.Variables, varargin{:} );
             
         end
@@ -182,6 +197,7 @@ classdef forecast
     
     methods ( Access = private )
         
+        %{
         function [processedValues, processedTime] = aggregate_unknown( obj, aggTime, step )
             
             n_t = length(obj.time);
@@ -205,7 +221,7 @@ classdef forecast
             
             jdx = 1;
             idx = 1;
-            while idx <= length( agg_timeStep ) && jdx <= n_t+sum(missing_dates)
+            while idx <= n_t && jdx <= n_t+sum(missing_dates)
                 %how many days from lead time we need to extract plus the
                 %only day we really have
                 int = (1:(missing_dates(idx)+1)*agg_timeStep(idx)) +(step-1)*agg_timeStep(idx);
@@ -223,7 +239,65 @@ classdef forecast
                 idx = idx+1;
             end
         end
-        
+        %}
+        function [processedValues, processedTime] = aggregate_unknown( obj, aggTime, leadTime, fill )
+            
+            n_t = length(obj.time);
+            if fill
+                % get how long is the time to the next available date
+                gap_time = obj.time(2:end)-obj.time(1:end-1);
+                % add one for the last measurement
+                gap_time(end+1) = gap_time(end);
+                missing_dates = days( gap_time )-1;
+            else
+                missing_dates = zeros(n_t, 1);
+            end
+            
+            q_t = n_t+sum(missing_dates);
+            processedValues = nan( q_t, obj.ensembleN );
+            processedTime = NaT( q_t, 1 );
+            
+            % old data index
+            idx = 1;
+            % new data index
+            jdx = 1;
+            
+            while idx <= n_t && jdx <= q_t
+                
+                % find out how many days need to be extracted for that day and the
+                % subsequent
+                pt = days((obj.time(idx)+aggTime) - obj.time(idx));
+                    
+                %sliding window to eventually fill the dates that are missing
+                sw = 0;
+                while sw <= missing_dates(idx)
+                    
+                    % the day I want to create the measurement for is
+                    processedTime(jdx) = obj.time(idx) + sw + leadTime;
+                    
+                    % get the array to extract the values:
+                    % aggregation time + shift for missing dates + shift for lead time
+                    int_d = (1:pt) + sw + leadTime;
+                
+                    % extract and place them in processedValues
+                    extractedV = obj.data(idx, int_d, :);
+                    
+                    %mean over lead time, that is future
+                    extractedV = mean( extractedV, 2);
+                    
+                    % remove lead time extra dimension and save them in processed
+                    processedValues(jdx,:) = squeeze( extractedV );
+                    
+                    %move to the day after
+                    jdx = jdx +1;
+                    sw = sw+1;
+                end
+                
+                idx = idx +1;
+            end
+            
+        end
+            
         function outputArg = aggregate_var( obj, aggTime )
             
             vars = obj.data(:, 1, 2);
