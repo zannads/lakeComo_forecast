@@ -25,16 +25,20 @@ clc
 
 % I use my own function to produce the data to use in the script so as to
 % change the minum amount of code possible.
-data = compact_files( );
+cv = ["";
+    ""];
+output_file = "";
+data = compact_files( [cv;output_file] );
 
 % definition of the calibration and validation data-set
-subset_cal = data(1:180,:);      
-subset_val = data(181:end,:);
+% set to 80% calibration, 20%  validation (16 years cal, 4 years val)
+subset_cal = data(1:5844,:);      
+subset_val = data(5845:end,:);
 
 % Set the parameters for the Extra-Trees
 M    = 500; % number of extra trees in the forest
 nmin = 5;   % number of points per leaf
-k    = 10;  % Number of random cuts
+k    = size(data, 2)-1;  % Number of random cuts -> number of candidate variables
 
 % Create struct of parameters for rtree-c Extra-Trees
 rtensparam                     = init_extra_trees();
@@ -85,7 +89,7 @@ title('validation - scatter plot');
 %% k-fold cross-validation
 
 % Define the parameters for the cross-validation
-ns   = 5; % number of folds
+ns   = 10; % number of folds        %should be enough
 flag = 1; % if flag == 1, an ensemble is built on the whole dataset at the end of the cross-validation. 
           % Otherwise (flag == 0), such model is not built.
 
@@ -135,60 +139,59 @@ title('variable ranking - bar plot');
 
 %% Iterative input selection
 % Set the parameters for IIS
-ns       = 5;  % number of folds for the cross-validation
-p        = 5;  % number of SISO models evaluated at each iteration
-epsilon  = 0;  % tolerance
-max_iter = 6;  % maximum number of iterations
-verbose  = 1;  % 0 for silent run / 1 for verbose mode 
-
-% Launch the IIS
-result_iis = perform_IIS(data,M,nmin,ns,p,epsilon,...
-    max_iter,flag,verbose)
-
-% Report exit condition
-disp(result_iis.exit_condition);
-
-% Selected variables (by iteration)
-% Determine the number of selected variables
-if strcmp(result_iis.exit_condition,...
-        'An input variable was selected twice') == 1
-    nVariables = length(fieldnames(result_iis)) - 3;
-else if strcmp(result_iis.exit_condition,...
-        'The maximum number of iterations was reached') == 1
-    nVariables = max_iter;
-    else
-        nVariables = length(fieldnames(result_iis)) - 2;
-    end
-end
-% Selected variables
-sel_variables    = nan(nVariables,1);
-for i = 1 : nVariables
-    thisIter = ['iter_',num2str(i)];
-    sel_variables(i) = result_iis.(thisIter).best_SISO(1);
-end
-
-% Cumulated R2 of the MISO model
-R2    = nan(nVariables,1);
-for i = 1 : nVariables
-    thisIter = ['iter_',num2str(i)];
-    R2(i) = result_iis.(thisIter).MISO.cross_validation.performance.Rt2_val_pred_mean;
-end
-deltaR2 = [R2(1) ; diff(R2)];
-
-% Plotting
-figure; 
-bar(1:nVariables,deltaR2,'FaceColor','b'); hold on;
-plot(R2,'o-','Color','k','LineWidth',...
-    1, 'MarkerSize', 8, 'MarkerFaceColor', 'w',...
-    'MarkerEdgeColor', 'k'); grid on;
-axis([0.5 5.5 0 1.0]);
-set(gca,'XTick',1:nVariables); 
-xLabels = arrayfun(@(x) {num2str(x)},sel_variables);
-set(gca,'XTickLabel', xLabels,'Ylim',[0.00 1.0]);
-xlabel('selected variables'); ylabel('R^2');
-title('IIS');
-
-
+% ns       = 5;  % number of folds for the cross-validation
+% p        = 5;  % number of SISO models evaluated at each iteration
+% epsilon  = 0;  % tolerance
+% max_iter = 6;  % maximum number of iterations
+% verbose  = 1;  % 0 for silent run / 1 for verbose mode 
+% 
+% % Launch the IIS
+% result_iis = perform_IIS(data,M,nmin,ns,p,epsilon,...
+%     max_iter,flag,verbose)
+% 
+% % Report exit condition
+% disp(result_iis.exit_condition);
+% 
+% % Selected variables (by iteration)
+% % Determine the number of selected variables
+% if strcmp(result_iis.exit_condition,...
+%         'An input variable was selected twice') == 1
+%     nVariables = length(fieldnames(result_iis)) - 3;
+% else if strcmp(result_iis.exit_condition,...
+%         'The maximum number of iterations was reached') == 1
+%     nVariables = max_iter;
+%     else
+%         nVariables = length(fieldnames(result_iis)) - 2;
+%     end
+% end
+% % Selected variables
+% sel_variables    = nan(nVariables,1);
+% for i = 1 : nVariables
+%     thisIter = ['iter_',num2str(i)];
+%     sel_variables(i) = result_iis.(thisIter).best_SISO(1);
+% end
+% 
+% % Cumulated R2 of the MISO model
+% R2    = nan(nVariables,1);
+% for i = 1 : nVariables
+%     thisIter = ['iter_',num2str(i)];
+%     R2(i) = result_iis.(thisIter).MISO.cross_validation.performance.Rt2_val_pred_mean;
+% end
+% deltaR2 = [R2(1) ; diff(R2)];
+% 
+% % Plotting
+% figure; 
+% bar(1:nVariables,deltaR2,'FaceColor','b'); hold on;
+% plot(R2,'o-','Color','k','LineWidth',...
+%     1, 'MarkerSize', 8, 'MarkerFaceColor', 'w',...
+%     'MarkerEdgeColor', 'k'); grid on;
+% axis([0.5 5.5 0 1.0]);
+% set(gca,'XTick',1:nVariables); 
+% xLabels = arrayfun(@(x) {num2str(x)},sel_variables);
+% set(gca,'XTickLabel', xLabels,'Ylim',[0.00 1.0]);
+% xlabel('selected variables'); ylabel('R^2');
+% title('IIS');
+% 
 %% Multiple runs of the IIS algorithm (with different shuffled datasets)
 
 % Define the parameters
@@ -198,7 +201,7 @@ p  = 5;         % number of SISO models evaluated at each iteration (this number
 epsilon  = 0;   % tolerance
 max_iter = 6;   % maximum number of iterations
                 %
-mult_runs = 10; % number of runs for the IIS algorithm               
+mult_runs = 1; % number of runs for the IIS algorithm               
 
 % Shuffle the data
 for i = 1:mult_runs
@@ -214,10 +217,10 @@ for i = 1:mult_runs
 end
 
 % Plot the results
-[X, R2] = visualize_inputSel(results_iis_n, size(data,2), mult_runs, max_iter );
+%[X, R2] = visualize_inputSel(results_iis_n, size(data,2), mult_runs, max_iter );
 
 % plot only the first max_iter variables
-[X, R2] = visualize_inputSel(results_iis_n, max_iter, mult_runs, max_iter );
+%[X, R2] = visualize_inputSel(results_iis_n, max_iter, mult_runs, max_iter );
 
 % change colormap
 [X, R2] = visualize_inputSel(results_iis_n, max_iter, mult_runs, max_iter, 'Jet' );
