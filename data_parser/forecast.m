@@ -247,7 +247,7 @@ classdef forecast
                 % get how long is the time to the next available date
                 gap_time = obj.time(2:end)-obj.time(1:end-1);
                 % add one for the last measurement
-                gap_time(end+1) = gap_time(end);
+                gap_time(end+1) = datetime(obj.time(end).Year+1, 1, 1)-obj.time(end);
                 missing_dates = days( gap_time )-1;
             else
                 missing_dates = zeros(n_t, 1);
