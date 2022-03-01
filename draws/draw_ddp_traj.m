@@ -1,7 +1,7 @@
 n_t = size( sim_h, 1);
 load( fullfile( raw_data_root, 'utils', 'comoDemand.txt' ), '-ascii' );
 %selected_w = 1:n_j;
-selected_w = 64;
+selected_w = 85;
 
 figure;
 tiledlayout(2,1);
@@ -45,8 +45,8 @@ p = parallelplot( JJJ' );
 p.CoordinateTickLabels = ["FloodDays [day/year]", "Deficit [??]", "Static low [day/year]" ];
 title( combination_title );
 %%
-%weight_selector( JJJ, [4.45; 689.194; 10.85] )
-speed_constraint_check( sim_r, sim_h)
+%weight_selector( JJJ, [4.45; 690.631; 9.8] ) ->85
+speed_constraint_check( sim_r(:,selected_w), sim_h(:,selected_w))
 
 function o = weight_selector( J, value )
     o = sum( (J-value).^2, 1);

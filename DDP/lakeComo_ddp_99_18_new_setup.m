@@ -59,7 +59,7 @@ LakeComo = LakeComo.setMEF( mef );
 
 %discr s
 eps1 = 0.01;
-eps2 = 0.05;
+eps2 = 0.025;
 discr_h = [-0.8:0.1:-0.4, -0.4+eps1:eps1:1.2, 1.2+eps2:eps2:2.2, 2.5:0.5:5] ;
 discr_s = LakeComo.level2storage( discr_h );    %using discr_s or discr_h is the same
 n_s = length(discr_s);
@@ -74,7 +74,7 @@ discr_u = unique( [V(:); v(:)] );
 clear V v
 %now I may want to fill the gaps in the most relevant part: 22-230 is
 %between MEF and max(comoDemand)
-eps1 = .5;
+eps1 = .1;
 discr_u = [discr_u; (0+eps1:eps1:230)'];
 discr_u = sort( discr_u );
 n_u = length( discr_u );
