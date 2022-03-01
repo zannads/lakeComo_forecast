@@ -206,3 +206,18 @@ for jdx = 1:4
     ylim( [0, 2])
     grid on
 end
+
+%% correlation 3d 
+figure;
+for idx = 1:2:8
+    mesh( efrfDetScores{"r", idx}{1}, 'EdgeColor', colors.efsr(ceil(idx/2), :));
+    hold on;
+end
+zlim( [0.4, 0.9]);
+zlabel( 'Correlation' );
+yticks( 1:length(aT));
+yticklabels( strcat("agg-", string(aT) ));
+ylabel( 'Agg Time');
+xticks( (1:size( efrfDetScores{"r",1}{1}, 2))-1 )
+xlabel( 'Lead');
+legend( 'Fuentes', 'Mandello', 'LakeComo', 'Olginate' );
