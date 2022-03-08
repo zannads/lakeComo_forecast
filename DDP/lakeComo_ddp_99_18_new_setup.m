@@ -20,17 +20,17 @@ clear leapDayActive
 % h flooding 1 value
 h_flo = 1.1;
 % dmv rain_weight n_t values
-% mef = 22*ones(n_t,1);
-% mef = min( mef, e);     % italian legislation defines mef as minimum between the value and the availabilityy, that in this case is the measured inflow
+mef = 22*ones(n_t,1);
+mef = min( mef, e);     % italian legislation defines mef as minimum between the value and the availabilityy, that in this case is the measured inflow
 % or 
-load( fullfile( raw_data_root, 'utils', 'DMV_99_19_LD_it.txt' ), '-ascii' );
-DMV_99_19_LD_it = timetable( (datetime(1999, 1, 1):datetime(2019, 12, 31))', DMV_99_19_LD_it );
-mef = DMV_99_19_LD_it{period, "DMV_99_19_LD_it"};
-clear DMV_99_19_LD_it;
+% load( fullfile( raw_data_root, 'utils', 'DMV_99_19_LD_it.txt' ), '-ascii' );
+% DMV_99_19_LD_it = timetable( (datetime(1999, 1, 1):datetime(2019, 12, 31))', DMV_99_19_LD_it );
+% mef = DMV_99_19_LD_it{period, "DMV_99_19_LD_it"};
+% clear DMV_99_19_LD_it;
 
 % rw will be used as deficit^(2-rw)
 rw = ones(n_t,1);           %abs value during the year: deficit^(2-1)
-rw( doy>91 & doy<=283 ) = 0;%squared during summer:     deficit^(2-0)
+rw( doy>= 91 & doy<=283 ) = 0;%squared during summer:     deficit^(2-0)
 % rw = rw-1;
 % or 
 % load( fullfile( raw_data_root, 'utils', 'rain_weight_99_19_LD.txt' ), '-ascii' );
@@ -39,23 +39,23 @@ rw( doy>91 & doy<=283 ) = 0;%squared during summer:     deficit^(2-0)
 % clear rain_weight_99_19_LD;
 
 % demand, s_low -365values
-load( fullfile( raw_data_root, 'utils', 'comoDemand.txt' ), '-ascii' );
+load( fullfile( raw_data_root, 'utils', 'aggregated_demand.txt' ), '-ascii' );
 load( fullfile( raw_data_root, 'utils', 'static_low.txt' ), '-ascii' );
 
 
 J = {floodDays( h_flo ), ...
-    avgDeficitBeta( 'Demand', comoDemand, 'MEF', mef, 'RainWeight', rw), ...
+    avgDeficitBeta( 'Demand', aggregated_demand, 'MEF', mef, 'RainWeight', rw), ...
     staticLow( static_low ) };
-%clear h_flo comoDemand static_low rw 
+clear h_flo aggregated_demand static_low rw 
 N_obj = length( J );
 
 %% MODEL
 LakeComo = lakeComo();
 %surface
-LakeComo = LakeComo.setSurface( 145900000);
+LakeComo = LakeComo.setSurface( 145900000 );
 %MEF
 LakeComo = LakeComo.setMEF( mef );
-%clear mef
+clear mef
 
 %discr s
 eps1 = 0.01;
@@ -75,36 +75,10 @@ clear V v
 %now I may want to fill the gaps in the most relevant part: 22-230 is
 %between MEF and max(comoDemand)
 eps1 = .1;
-discr_u = [discr_u; (0+eps1:eps1:230)'];
+discr_u = [discr_u; (22+eps1:eps1:LakeComo.max_release(LakeComo.level2storage(1.1), 1, 0) )'];
 discr_u = sort( discr_u );
 n_u = length( discr_u );
 clear eps1
-% get available release as func of t and s and e
-% R : n_t x n_s x n_u
-%R = LakeComo.actual_release( discr_u, discr_s, 1:n_t, 0);
-%{ 
-make R unique, since for some value of discr_s, we can have only 1 value,
-(for example below h = -0.4 the only possible value is 0) 
-it doesn't make sense to have that value n_u times in 3 dim. If I replace
-the multiples with NaN speed will increase.
-%}
-% tic
-% rem = 0;
-% for idx = 1:n_t
-%     for jdx = 1:n_s
-%         [RR, ia, ic] = unique( R(idx, jdx, :) );
-%         rem = rem + n_u - length(RR);
-%         
-%         for mdx = 1:length(ia)
-%             ic( discr_u == R(idx,jdx,ia(mdx)) ) = 0;
-%         end
-%         R(idx, jdx, ic>0 ) = nan;
-%     end
-% end
-% toc
-% fprintf( "Reduce of %d points. [%3.1f %%]\n", rem, rem/(n_s.*n_u.*n_t)*10 ) ;
-% clear idx jdx ia ic RR rem mdx 
-
 %% WEIGHTS and normalization
 N = 15;
 [X, Y, Z] = meshgrid( (0:N)/(N) );
@@ -154,3 +128,4 @@ if plot_on
     hold on
     plot( [1, n_t], [discr_u, discr_u] )
 end
+clear fullPeriod plot_on

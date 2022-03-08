@@ -1,5 +1,5 @@
 %% OPTIMIZATION
-disp('optimization');
+fprintf('optimization\n');
 
 tic;
 H = nan( n_t+1, n_j, n_s);
@@ -11,7 +11,14 @@ G_ = [J{1}.evaluate( discr_h );
 % 1 x n_j x n_s = n_j x 3 x 3 x n_s
 H( end, :, :) = weights*Gnorm*(Gk*G_-Gbias);
 
+runt_print = ceil( n_t/ 100 );
+lineLenght = fprintf('Process: %2.0f %%', 0);
 for t = n_t:-1:+1
+    if rem(n_t-t, runt_print) == 0  
+        fprintf(repmat('\b',1,lineLength))
+        fprintf( 'Process: %2.0f %%', (n_t-t)/n_t*100 );
+        runt_idx = 0;
+    end
     
     % get release
     % 1 x n_s x n_u
@@ -58,14 +65,20 @@ end
 toc
 
 %% do simulation for the single objectives
-disp('simulation');
+fprintf('simulation\n');
 s_init = LakeComo.level2storage(historical{ period(1), "h"});
 
 sim_s = nan( n_t+1, n_j);
 sim_r = nan( n_t, n_j);
 sim_s(1, :) = s_init;
 tic
+fprintf( 'Process: %2.0f %%', 0 );
 for t = 1:n_t
+    if rem(t, runt_print) == 0  
+        fprintf(repmat('\b',1,lineLength));
+        fprintf( 'Process: %2.0f %%', t/n_t*100 );
+        runt_idx = 0;
+    end
     
     % get release
     % R_ : 1 x n_j x n_u
@@ -124,16 +137,13 @@ counts - > n_j row i is combination of weight that corresponds to n_j col i
     sim_s(t+1, :) = S_';
     %}
 end
-sim_s = sim_s(1:n_t, :);
 sim_h = LakeComo.storage2level(sim_s);
-clear t k G_ G Q H_t1 H_ R_ S_ idx_u
+clear t k G_ G Q H_t1 H_ R_ S_ idx_u 
+clear s_init runt_print
 
-JJJ = [J{1}.evaluate( sim_h );
+JJJ = [J{1}.evaluate( sim_h(2:end, :) );
     J{2}.evaluate( sim_r, 1:n_t, doy );
-    J{3}.evaluate( sim_h, doy ) ];
+    J{3}.evaluate( sim_h(2:end, :), [doy(2:end); myDOY(period(end)+1)] ) ];
 JJJ = diag( [1/yy, 1, 1/yy] )* JJJ; % floodDays and static are defined as day/year
 toc
-JJJ_hist = [J{1}.evaluate( historical{period, "h"} );
-    J{2}.evaluate( historical{period, "r"} , 1:n_t, doy );
-    J{3}.evaluate( historical{period, "h"} , doy ) ];
-JJJ_hist = diag( [1/yy, 1, 1/yy] )* JJJ_hist;
+save ddp_sol_99_18.mat discr_h discr_u Gbias Gk Gnorm H J JJJ LakeComo period sim_h sim_r weights
