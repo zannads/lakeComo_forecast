@@ -26,15 +26,18 @@ setup_params
 
 % I use my own function to produce the data to use in the script so as to
 % change the minum amount of code possible.
-cv = dir( fullfile(raw_data_root, 'candidate_variables', '*.txt') );
-cv = string(fullfile({cv.folder}', {cv.name}'));
-output_file = string(fullfile( raw_data_root, 'release_sol85_99_18.txt' ) );
-data = compact_files( [cv;output_file] );
+c_v = dir( fullfile(raw_data_root, 'candidate_variables_99_18', '*.txt') );
+c_v = string(fullfile({c_v.folder}', {c_v.name}'));
+output_file = string(fullfile( raw_data_root, 'release_sol86_99_18.txt' ) );
+data = compact_files( [c_v;output_file] );
+[~, c_v, ~] = fileparts(c_v);
+clear output_file
 
 %% Set the parameters for the Extra-Trees
 M    = 500; % number of extra trees in the forest
-nmin = 5;   % number of points per leaf
+nmin = 6;   % number of points per leaf
 k    = size(data, 2)-1;  % Number of random cuts -> number of candidate variables
+%k = 30;
 %% Input ranking
 
 % Shuffle the data
@@ -46,7 +49,7 @@ data_sh = shuffle_data(data);
 % Graphical analysis
 
 % sort variables for bar plot
-[temp,ixes] = sort(result_rank(:,2))
+[temp,ixes] = sort(result_rank(:,2));
 figure;
 bar(result_rank(ixes,1));
 xlabel('variable'); 
@@ -56,26 +59,30 @@ title('variable ranking - bar plot');
 %% Multiple runs of the IIS algorithm (with different shuffled datasets)
 
 % Define the parameters
-ns = 5;         % number of folds
-p  = 5;         % number of SISO models evaluated at each iteration (this number must be smaller than the 
-                % number of candidate inputs.
+ns = 10;         % number of folds
+p  = 5;         % number of SISO models evaluated at each iteration 
 epsilon  = 0;   % tolerance
-max_iter = 6;   % maximum number of iterations
-                %
+max_iter = 7;   % maximum number of iterations
+
 mult_runs = 10; % number of runs for the IIS algorithm               
 
 % Run the IIS algorithm
+results_iis_n = cell(1, mult_runs);
 for i = 1:mult_runs
+    fprintf( 'Run #%d\n',num2str(i) );
     % Shuffle the data
-    eval(['data_sh' '=' 'shuffle_data(data);']);
-    eval(['result_iis_' num2str(i) '=' 'iterative_input_selection(data_sh,M,nmin,ns,p,epsilon,max_iter);']);
-    eval(['results_iis_n{i} = result_iis_',num2str(i),';']);
-    eval(['clear result_iis_', num2str(i)])
+    data_sh = shuffle_data(data);
+    results_iis_n{i} = iterative_input_selection(data_sh,M,nmin,ns,p,epsilon,max_iter);
     clear data_sh 
 end
 
 % Plot the results
 [X, R2] = visualize_inputSel(results_iis_n, max_iter, mult_runs, max_iter, 'Jet' );
+print_names(c_v, X)
 
+lst = dir( fullfile( raw_data_root, 'ivs_solutions', '*.mat' ) );
+name = fullfile(raw_data_root, 'ivs_solutions', ['ivs_', num2str(length(lst)+1), '.mat'] );
+eval( ['save ',name, ' c_v epsilon M max_iter nmin ns p R2 X'] ); 
+clear lst name
 % This code has been written by Stefano Galelli and Riccardo Taormina.
 % Updated by Dennis Zanutto
