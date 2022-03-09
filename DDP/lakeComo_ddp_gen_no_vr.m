@@ -12,7 +12,7 @@ G_ = [J{1}.evaluate( discr_h );
 H( end, :, :) = weights*Gnorm*(Gk*G_-Gbias);
 
 runt_print = ceil( n_t/ 100 );
-lineLenght = fprintf('Process: %2.0f %%', 0);
+lineLength = fprintf('Process: %2.0f %%', 0);
 for t = n_t:-1:+1
     if rem(n_t-t, runt_print) == 0  
         fprintf(repmat('\b',1,lineLength))
