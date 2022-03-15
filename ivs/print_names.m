@@ -4,6 +4,6 @@ function selected = print_names( c_v, X)
     % selected string matrix of the same dimension of X, where the neame is
     % inserted instead of the number
     
-    selected = strings( size(X) );
+    selected = cell( size(X) );
     selected(X>0) = c_v(X(X>0));
 end
