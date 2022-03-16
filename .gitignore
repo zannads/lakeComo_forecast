@@ -1,5 +1,8 @@
 
 *.nc
+<<<<<<< HEAD
 DDP/ddp_profile_time.m
 *.fig
+=======
+>>>>>>> ivs
 DDP/lakeComo_ddp_setupforFede.m
