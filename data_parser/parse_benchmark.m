@@ -27,7 +27,7 @@ n_t = length( time );
 names = strcat( "agg_", string( std_aggregation) );
 
 %% inflow aggregation
-qAgg = aggregate_historical(time, historical.dis24(historical.Time>= DT_S), std_aggregation );
+qAgg = aggregate_historical(time, historical.dis24(historical.Time>= datetime(1999,1,1)), std_aggregation );
 qAgg = array2timetable( qAgg, 'RowTimes', time,'VariableNames', names );
 
 %% AVERAGE

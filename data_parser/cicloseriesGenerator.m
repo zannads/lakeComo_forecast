@@ -1,5 +1,9 @@
 function outputArg = cicloseriesGenerator( ciclo, tseries )
-
+% cicloseriesGenerator fill a time series with a ciclostationary behaviour.
+%   q = cicloseriesGenerator( ciclo, time ) repeats the value contained in
+%   ciclo for the values in time. 
+%   ciclo must be a timetable of size 365xn;
+%   time must be a time vector of at least 366 elements (to improve)
 %%
 if ~istimetable(ciclo)
     error( 'TimeSeries:wrongInput', ...

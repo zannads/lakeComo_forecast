@@ -1,5 +1,5 @@
 function ciclo = ciclostationary( historical )
-
+% ciclostationary 
 %%
 if ~istimetable( historical )
     error( 'TimeSeries:wrongInput', ...
