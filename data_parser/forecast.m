@@ -20,14 +20,17 @@ classdef forecast
             %   this class. It is necessary that the time array is as loing
             %   as the first dimension of the data array.
             if nargin == 0
+                % empty constructor
                 return;
             end
             
             if ~isdatetime( time )
-                error( 'no input' );
+                error( 'Forecast:wrongInput', ...
+                    'The first input must be a datetime object.' );
             end
             if ~isnumeric(data) || size( data, 1) ~= length(time)
-                error( 'bad input' );
+                error( 'Forecast:wrongInput', ...
+                    'The second input must be a numeric array with the first dimension matching the length of the time array.' );
             end
             obj.time = time;
             obj.data = data;
@@ -36,40 +39,74 @@ classdef forecast
             defaultEN = size( data, 3);
             defaultBN = false;
             defaultName = "forecast";
+            defaultLoc = [];
             
             validLT = @(x) isscalar(x) && ( isnan(x) || isinf(x) || isnumeric(x) );
             validEN = @(x) isscalar(x) && ( isinf(x) || isnumeric(x) );
             validBN = @(x) isscalar(x) && islogical(x);
             validNA = @(x) isscalar(x) && isstring(x);
+            validLo = @(x) true;
             
             p = inputParser;
-            addParameter( p, 'LeadTime', defaultLT, validLT );
-            addParameter( p, 'EnsembleNumber', defaultEN, validEN );
-            addParameter( p, 'Benchmark', defaultBN, validBN );
-            addParameter( p, 'Name', defaultName, validNA );
+            addParameter( p, 'LeadTime',        defaultLT,  validLT );
+            addParameter( p, 'EnsembleNumber',  defaultEN,  validEN );
+            addParameter( p, 'Benchmark',       defaultBN,  validBN );
+            addParameter( p, 'Name',            defaultName,validNA );
+            addParameter( p, 'Location',        defaultLoc, validLo );
             
             parse( p, varargin{:} );
             
-            obj.leadTime = p.Results.LeadTime;
-            obj.ensembleN = p.Results.EnsembleNumber;
-            obj.benchmark = p.Results.Benchmark;
-            obj.name = p.Results.Name;
+            obj.leadTime    = p.Results.LeadTime;
+            obj.ensembleN   = p.Results.EnsembleNumber;
+            obj.benchmark   = p.Results.Benchmark;
+            obj.name        = p.Results.Name;
+            obj.location    = p.Results.Location;
         end
         
         function outputArg = getTimeSeries( obj, aggTime, leadTime, fill )
+            % getTimeSeries ts = getTimeSeries( forecast, aggTime, leadTime ) creates a
+            % timetable in the period of the forecast by aggregating using aggTime,
+            % shifting ahead of the value inside the leadTime variable.
+            %       
+            %       getTimeSeries ts = getTimeSeries( forecast, aggTime, leadTime,
+            %       fill) creates a timetable in the period of each forecast by
+            %       aggregating using aggTime, shifting ahead of the value inside the
+            %       leadTime variable. The fill flag checks if the forecast is at daily
+            %       step, if it's not and the flag is true it generates a time series
+            %       on a daily step.
             
-            %%input check
-            if nargin < 4
+            %% input check
+            if nargin < 4 
                 fill = false;
             end
+            if ~islogical(fill) 
+                error( 'Forecast:wrongInput', ...
+                    'The fill flag must be a logical value.' );
+            end
+            if ~iscalendarduration(aggTime) && ~isnumeric(aggTime)
+                error( 'Forecast:wrongInput', ...
+                    'The aggregation time (second input) must be a calendar duration object value or a numeric.' );
+            end
+            if ~isnumeric(leadTime)
+                error( 'Forecast:wrongInput', ...
+                    'The lead time (third input) must be a numeric value.' );
+            end
+            if ~isscalar(aggTime) || ~isscalar(leadTime) || ~isscalar(fill)
+                warning( 'The additional input must be scalar values. Only first element of the array is used' );
+                aggTime = aggTime(1);
+                leadTime = leadTime(1);
+                fill = fill(1);
+            end
+                
+            %% start working
 
+            % creates a timetable for each forecast
             tt = cell(1, length(obj) );
             for idx = 1:length(obj)
                 %%calculations
                 if isinf( obj(idx).leadTime )
-                    % the same value is for all lead times, i.e. I only need to
-                    % move the dates.
-                    %it's given for granted that the time series is already dailybased
+                    % the same value is for all lead times, i.e. I only need to move the dates.
+                    % it's given for granted that the time series is already on a daily step.
                     
                     processedValues = obj(idx).data;
                     processedTime = obj(idx).time+leadTime;
@@ -81,10 +118,12 @@ classdef forecast
                     processedTime = obj(idx).time;
                     
                     if isinf( obj(idx).ensembleN )
+                        % if it is probabilistic the variance is aggregated on a different way
                         processedValues(:,1) = aggregate_historical( obj(idx).time, obj(idx).data(:,1,1), aggTime );
                         processedValues(:,2) = aggregate_var( obj(idx), aggTime );
                     else
-                        processedValues = squeeze( aggregate_historical( obj(idx).time, obj(idx).data(:,1,:), aggTime ) );
+                        % if it is an ensemble of perfect knwon values I can simply aggregate
+                        processedValues = aggregate_historical( obj(idx).time, obj(idx).data(:,1,:), aggTime );
                     end
                 else
                     % obj.leadTime is a finite number
@@ -96,9 +135,12 @@ classdef forecast
                         [processedValues, processedTime] = aggregate_unknown( obj(idx), aggTime, leadTime, fill );
                     end
                 end
-
+                
+                % insert the names
                 if obj(idx).ensembleN == 1
                     names = obj(idx).name;
+                elseif isinf(obj(idx).ensembleN)
+                    names = [strcat(obj(idx).name, "_mean"), strcat(obj(idx).name, "_var")];
                 else
                     names = strcat( obj(idx).name, "_", string(1:obj(idx).ensembleN) );
                 end
@@ -106,12 +148,13 @@ classdef forecast
                 tt{idx} = array2timetable( processedValues, 'RowTimes', processedTime, 'VariableNames', names );
             end
 
+            %% finish working
             outputArg = synchronize( tt{:}, 'intersection' );
         end
         
         function outputArg = valid_agg_time( obj, agg_times)
             %valid_agg_time returns true if the aggregation time can be
-            %used for the given Forecast.
+            %used for the given Forecast. To use on scalar forecast, not for array.
             if isinf(obj.leadTime) || isnan(obj.leadTime)
                 outputArg = true( size(agg_times) );
                 return;
@@ -124,27 +167,27 @@ classdef forecast
             %it needs to be less then the lead time minus gap_time, i.e when you need
             %to fill some dates, the worst case is when the month is 31 days long for
             %the monthly aggregation.
-            outputArg = iscalendarduration(agg_times) & ...
-                (obj.leadTime-gap_time>= ( split(agg_times,"days")+31*split(agg_times,"months") ) );
+            if iscalendarduration(agg_times)
+                outputArg = obj.leadTime-gap_time>= ( split(agg_times,"days")+31*split(agg_times,"months") );
+            else
+                outputArg = obj.leadTime-gap_time>= agg_times;
+            end
         end
-        %{
-        to change:
         
-        max_leadTime -> max_leadtime
-        given an aggregation time return how many days ahead you can actually go
-        with that. 
-        %}
         function outputArg = max_leadTime( obj, agg_times )
             %max_leadTime extracts the maximum steap ahead for this couple
             %Forecast - agg_time.
             %   By design it can be maximum 15 anyway.
             %get the maximum lead time, at most 15..
+            % To use on scalar forecast, not for array.
             if isinf(obj.leadTime) || isnan(obj.leadTime)
                 outputArg = 15*ones(size(agg_times));
                 return;
             end
             
-            agg_times = split(agg_times, "days") + 31*split(agg_times, "months");
+            if iscalendarduration( agg_times )
+                agg_times = split(agg_times, "days") + 31*split(agg_times, "months");
+            end
             
             % get how long is the time to the next available date
             gap_time = obj.time(2:end)-obj.time(1:end-1);
@@ -168,6 +211,9 @@ classdef forecast
             elseif strcmp( method, 'average' )
                 outputArg = obj;
                 outputArg.data = mean(outputArg.data, 3);
+            else 
+                error( 'Forecast:wrongInput', ...
+                    'Method can be first ensemble ror average of the ensemble.\nFor probabilistic forecats the mean is always extracted.' );
             end
             
             outputArg.ensembleN = 1;
@@ -180,7 +226,7 @@ classdef forecast
             %   with a time step of agg_time days and lead time of
             %   lead_time day.
             
-            if nargin >1 & any( strcmp( varargin, 'Figure' ) )
+            if nargin >3 && any( strcmp( varargin, 'Figure' ) )
                 idx = find( strcmp( varargin, 'Figure' ), 1, 'first');
                 outputArg = varargin{idx+1};
                 varargin(idx:idx+1) = [];
@@ -189,7 +235,15 @@ classdef forecast
             end
             
             t = obj.getTimeSeries( aggTime, step, true );
-            plot( t.Time, t.Variables, varargin{:} );
+            if isinf(obj.ensembleN)
+                % back to values using the inverse cumulative distribution function, I
+                % store the variance, but I need to use std dev in this function.
+               y = icdf( 'Normal', [0.333, 0.5, 0.666], t{:,1}, t{:,2}.^0.5 );
+               plot( t.Time, y, varargin{:} );
+            else
+                % prob or det
+                plot( t.Time, t.Variables, varargin{:} );
+            end
             
         end
         

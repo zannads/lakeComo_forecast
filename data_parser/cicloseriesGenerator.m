@@ -2,40 +2,56 @@ function outputArg = cicloseriesGenerator( ciclo, tseries )
 % cicloseriesGenerator fill a time series with a ciclostationary behaviour.
 %   q = cicloseriesGenerator( ciclo, time ) repeats the value contained in
 %   ciclo for the values in time. 
-%   ciclo must be a timetable of size 365xn;
-%   time must be a time vector of at least 366 elements (to improve)
+%   ciclo must be a timetable of size [365, n_s];
+%   time must be a time vector or a sequence of double represenign the doy
+%   of size [n_t,1]
+%   
+%   q will have size [n_t,n_s], its type will be linked to the type of
+%   tseries. If tseries is a datetime object, the output will be a
+%   timetable with tseries as time, while if tseries is numeric the output
+%   will be a numeric.
 %%
-if ~istimetable(ciclo)
+if ~istimetable(ciclo) && ~isnumeric(ciclo)
     error( 'TimeSeries:wrongInput', ...
-        'Error. \nThe input must be a Time Series object.' );
+        'The input must be a Timetable or numeric object.' );
 end
-if size( tseries, 1 )< 365*2
+% make tseries a vertical array of size [n_t,1]
+tseries = tseries(:);
+if ~(isdatetime( tseries ) || (isnumeric( tseries ) && all(tseries>0 & tseries<366) ) )
     error( 'TimeSeries:wrongInput', ...
-        'Error. \nThe input must be at least 2 years long.' );
+        'The input must be a datetime object or a numeric representing the doy.' );
 end
 if size( ciclo, 1 )~= 365
     error( 'TimeSeries:wrongInput', ...
-        'Error. \nThe ciclostationary mean must be a sequence of 365 days.' );
-    % I trust that it is in the right order
+        'The ciclostationary mean must be a sequence of 365 days.' );
+    % I trust that it is in the right order, otherwise undefined behaviour
 end
 
 %%
-outputArg = zeros( size(tseries, 1), 2 );
-for idx = 1:size(tseries, 1)
-    [y, m, d] = ymd( tseries(idx) );
-    
-    if mod(y, 4) == 0 & m==2 & d==29
-        % if leap day use 28th of february and 1st march
-        outputArg(idx, 1) = mean( ...
-            [ciclo.dis24( ciclo.Time.Month == 2 & ciclo.Time.Day == 28 );
-            ciclo.dis24( ciclo.Time.Month == 3 & ciclo.Time.Day == 1 )]...
-            );
-        outputArg(idx, 2) = ciclo.var24( ciclo.Time.Month == 2 & ciclo.Time.Day == 28 );
-    else
-        outputArg(idx, 1) = ciclo.dis24( ciclo.Time.Month == m & ciclo.Time.Day == d );
-        outputArg(idx, 2) = ciclo.var24( ciclo.Time.Month == m & ciclo.Time.Day == d );
-    end
+% convert into numeric the inputs
+if istimetable( ciclo )
+    ciclo_ = ciclo{:, :};
+else 
+    ciclo_ = ciclo;
 end
 
-outputArg = array2timetable( outputArg, 'RowTimes', tseries, 'VariableNames', {'dis24', 'var24'} );
+if isdatetime( tseries )
+    tseries_ = myDOY( tseries );
+else
+    tseries_ = tseries;
+end
+% now that I have a vector with the indexes to extract from ciclo that is a
+% numeric matrix.
+outputArg = ciclo_( tseries_, :);
+
+if isdatetime( tseries )
+    if istimetable( ciclo )
+        outputArg = array2timetable( outputArg, 'RowTimes', tseries, 'VariableNames', ciclo.Properties.VariableNames );
+    else
+        outputArg = array2timetable( outputArg, 'RowTimes', tseries );
+    end
+% else
+%   outputArg is already a numeric type
+end
+
 end

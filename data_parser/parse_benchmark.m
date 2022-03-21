@@ -9,7 +9,7 @@ fgetl(fid);
 % read data
 while ~feof(fid)
     % I don't know the lenght at priori
-tline(end+1, :) = fgetl(fid); %#ok<SAGROW>
+    tline(end+1, :) = fgetl(fid); %#ok<SAGROW>
 end
 fclose(fid);
 
@@ -22,12 +22,13 @@ historical = array2timetable( h, 'RowTimes', t, ...
 
 clear h t tline fid 
 %% help 
+DT_S = datetime(1999,1,1);
 time = historical.Time(historical.Time>= DT_S);
 n_t = length( time );
 names = strcat( "agg_", string( std_aggregation) );
 
 %% inflow aggregation
-qAgg = aggregate_historical(time, historical.dis24(historical.Time>= datetime(1999,1,1)), std_aggregation );
+qAgg = aggregate_historical(time, historical.dis24(historical.Time>= DT_S), std_aggregation );
 qAgg = array2timetable( qAgg, 'RowTimes', time,'VariableNames', names );
 
 %% AVERAGE
@@ -39,9 +40,9 @@ averageForecast = forecast( time, data, ...
         'Name', "average" );
 
 %% CICLOSTATIONARY
-cs = moving_average( historical  ); %filter noise
+cs = moving_average( historical(:,"dis24") ); %filter noise
 %cs = historical( :, "dis24" );       %not noise filtered
-cs = ciclostationary( cs  ); %get one realization(365 d) of ciclostationary mean
+cs = ciclostationary( cs ); %get one realization(365 d) of ciclostationary mean of release
 
 % get a time series starting from historical. 
 cs = cicloseriesGenerator( cs, time );
@@ -57,8 +58,7 @@ con_step = [1; 3; 7; 30]; %days
 names = strcat( "ave_", string( con_step ), "d" );
 conForecast(length(con_step)) = forecast;
 
-% I start from a ciclostationary, so that where I can't
-% fill I use ciclostationary mean already.
+% I start from the historical so I don't have any problem going backward
 for aggT = 1:length(con_step)
     
     h = historical.dis24( historical.Time >= time(1)-con_step( aggT ) );
@@ -74,4 +74,4 @@ for aggT = 1:length(con_step)
 end
 
 %%
-clear aggT con_step cs data h idx n_t names time
+clear aggT con_step cs data h idx n_t names time DT_S

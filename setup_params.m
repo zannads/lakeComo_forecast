@@ -21,6 +21,7 @@ Mandello.fname = "Mandello";
 Mandello.r = 43;
 Mandello.c = 38;
 locations = [Fuentes, Mandello, LakeComo, Olginate];
+clear Fuentes Olginate LakeComo Mandello
 
 std_aggregation = [caldays([1, 3, 7:7:28])'; calmonths(1); caldays([42, 56])'; calmonths(2:7)'];
 

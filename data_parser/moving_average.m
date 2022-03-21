@@ -1,30 +1,41 @@
-function historical = moving_average( historical, varargin)
-if ~strcmp( class(historical), class(timetable) ) 
+function historical = moving_average( historical, w)
+    % moving average h = moving_average( q ) generates a timetable object in
+    % the same period of q with a moving average window of +-5 steps. 
+    %       h = moving_average( q, w )  generates a timetable object in
+    % the same period of q with a moving average window of +-w steps.
+    
+if ~istimetable( historical )
     error( 'TimeSeries:wrongInput', ...
-        'Error. \nThe input must be a Time Series object.' );
+        'The input must be a timetable object.' );
 end
-% TODO: handle w and varargin
+if nargin < 2 
+    w = 5;
+end
 
 %% start moving average
-stream = historical.dis24;
-n_days = length( stream );
+stream = historical{:, :};
+[n_days, n_ex] = size( stream );
 n_periods = floor(n_days/365); %number of full periods
-w = 5;
 
-% estraggo la media dei due giorni prima dell inizio e la media dei due giorni dopo la fine
-pre = zeros( w,1);
+% I extract the average of the w days before and at the end, to extend the
+% time series so that I can have a moving average also for the first w
+% days. 
+pre  = zeros( w, n_ex);
 preSD = 365-w;
-post = zeros( w,1);
+post = zeros( w, n_ex);
 postSD = n_days-365*n_periods;
 for idx = 1:w
-    pre(idx) = mean( stream( (preSD+idx):365:n_days ) );
-    post(idx) = mean( stream( (postSD+idx):365:n_days-w ) );
+    pre(idx, :)  = mean( stream( (preSD +idx):365:n_days,   : ), 1 );
+    post(idx, :) = mean( stream( (postSD+idx):365:n_days-w, : ), 1 );
 end
 temp = [pre; stream; post];
+% Now temp is an extend stream of size [2w+n_days, n_ex]
 
-for idx = 1:size( stream, 1 )
-    stream(idx) = mean( temp( idx:(idx+2*w) ) ) ;
+for idx = 1:n_days
+    % using temp this is the same of doing 
+    % stream(idx) = stream( idx-w:idx+w );
+    stream(idx, :) = mean( temp( idx:(idx+2*w), : ), 1 ) ;
 end
 
-historical.dis24 = stream;
+historical{:,:} = stream;
 end
