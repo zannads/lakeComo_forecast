@@ -230,15 +230,17 @@ classdef forecast
                 idx = find( strcmp( varargin, 'Figure' ), 1, 'first');
                 outputArg = varargin{idx+1};
                 varargin(idx:idx+1) = [];
+                figure(outputArg);
             else
                 outputArg = figure;
             end
+            hold on;
             
             t = obj.getTimeSeries( aggTime, step, true );
             if isinf(obj.ensembleN)
                 % back to values using the inverse cumulative distribution function, I
                 % store the variance, but I need to use std dev in this function.
-               y = icdf( 'Normal', [0.333, 0.5, 0.666], t{:,1}, t{:,2}.^0.5 );
+               y = icdf( 'Normal', [0.25, 0.5, 0.75], t{:,1}, t{:,2}.^0.5 );
                plot( t.Time, y, varargin{:} );
             else
                 % prob or det

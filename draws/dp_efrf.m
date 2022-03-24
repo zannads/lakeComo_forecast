@@ -8,17 +8,17 @@ xlim( [datetime(2015,1,1), datetime(2015, 12, 31) ]);
 ylim( [0, 700]);
 xlabel('Time');
 ylabel('dis_{24} [m^{3}/{s}]', 'FontSize', 14)
-title( "Lead1", 'FontSize', 14 );
+title( "Daily discharge lead0", 'FontSize', 14 );
 
 h2015_efrf_1mo = figure;
-plot( qAgg.Time(qAgg.Time.Day==1), qAgg.agg_1mo(qAgg.Time.Day==1) , 'k', 'LineWidth', 1.75);
+plot( qAgg.Time, qAgg.agg_1mo , 'k', 'LineWidth', 1.75);
 hold on
 efrfForecast(2).plot(calmonths(1), 0, 'Figure', h2015_efrf_1mo)
 xlim( [datetime(2015,1,1), datetime(2018, 12, 31) ]);
 ylim( [0, 500]);
 xlabel('Time');
 ylabel('monthly discharge [m^{3}/{s}]', 'FontSize', 14)
-title( "1 step ahead of monthly average discharge", 'FontSize', 14 );
+title( "Monthly discharge lead0", 'FontSize', 14 );
 
 %%
 aT = efrfProbScores.Properties.CustomProperties.agg_times;
@@ -173,29 +173,6 @@ for jdx = 1:4
     for idx = 1:6
         score = cat(1,efrfProbScores{"bs_4", idx}{1}(:,1).bs);
         plot( 1:length(aT), score(:, jdx), 'LineWidth', 2, 'Marker', markpos{idx});
-    end
-    title( strcat("BS ", seas{jdx}), 'FontSize', 18 );
-    xlabel( 'Aggregation time', 'FontSize', 14 );
-    ylabel( 'BS', 'FontSize', 14 );
-    xticks( 1:length(aT))
-    xticklabels( strcat("agg-", string(aT) ));
-    xlim( [1, length(aT)] )
-    ylim( [0, 2])
-    grid on
-end
-
-%%
-figure;
-tiledlayout(2,2)
-for jdx = 1:4
-    nexttile;
-    colororder( [colors.det;colors.det;colors.det;colors.det;...
-        colors.ave; colors.cic; colors.con] )
-    %plot( [1,length(aT)], [1, 1], '-');
-    hold on;
-    for idx = 1:6
-        score = cat(1,efrfProbScores{"bs_6", idx}{1}(:,1).bs);
-        plot( 1:length(aT), score(:,jdx), 'LineWidth', 2, 'Marker', markpos{idx});
     end
     title( strcat("BS ", seas{jdx}), 'FontSize', 18 );
     xlabel( 'Aggregation time', 'FontSize', 14 );

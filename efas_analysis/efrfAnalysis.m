@@ -1,5 +1,6 @@
 %% efrf
 aT = std_aggregation( efrfForecast(1).valid_agg_time( std_aggregation ) );
+aT(end-1) = []; % I don't want 1 month of aggregation
 lTmax = efrfForecast(1).max_leadTime( aT );
 efrfDetForecast( 8 ) = forecast;
 
@@ -85,21 +86,6 @@ bs_settings(4).type = 'seasonal';
 bs_settings(4).bias = false;
 bs_settings(4).quant = [1/3, 2/3];
 
-bs_settings(5).type = 'seasonal';
-bs_settings(5).bias = false;
-bs_settings(5).quant = 1/20;
-
-bs_settings(6).type = 'seasonal';
-bs_settings(6).bias = false;
-bs_settings(6).quant = 1/10;
-
-bs_settings(7).type = 'seasonal';
-bs_settings(7).bias = false;
-bs_settings(7).quant = 9/10;
-
-bs_settings(8).type = 'seasonal';
-bs_settings(8).bias = false;
-bs_settings(8).quant = 19/20;
 for idx = 1:length(bs_settings)
 bs_settings(idx).name = "bs_" + string(idx);
 end
@@ -123,8 +109,8 @@ end
 efrfProbScores = addprop(efrfProbScores, 'agg_times', 'table');
 efrfProbScores.Properties.CustomProperties.agg_times = aT;
 
-%% crps
 signals = [efrfForecast, benchmark];
+%% crps
 for aggT = 1:length(aT)
     aT(aggT)
     w = strcat( "agg_", string( aT(aggT) ) );

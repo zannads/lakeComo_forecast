@@ -85,21 +85,6 @@ bs_settings(4).type = 'seasonal';
 bs_settings(4).bias = false;
 bs_settings(4).quant = [1/3, 2/3];
 
-bs_settings(5).type = 'seasonal';
-bs_settings(5).bias = false;
-bs_settings(5).quant = 1/20;
-
-bs_settings(6).type = 'seasonal';
-bs_settings(6).bias = false;
-bs_settings(6).quant = 1/10;
-
-bs_settings(7).type = 'seasonal';
-bs_settings(7).bias = false;
-bs_settings(7).quant = 9/10;
-
-bs_settings(8).type = 'seasonal';
-bs_settings(8).bias = false;
-bs_settings(8).quant = 19/20;
 for idx = 1:length(bs_settings)
 bs_settings(idx).name = "bs_" + string(idx);
 end
@@ -166,8 +151,6 @@ for aggT = 1:length(aT)
         
     end
 end
-
-
 
 %% bs
 for aggT = 1:length(aT)
