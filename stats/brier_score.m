@@ -26,7 +26,10 @@ classdef brier_score
                     'Error. \nThe input must be defined in the same time period.' );
             end
             
+            % third dimension is the number of period in which the series is divided,
+            % can be seasons or month or something else.
             m = size( f, 3 );
+            % preallocate
             outputArg = brier_score.empty( m );
             
             for mdx = 1:m
@@ -83,8 +86,8 @@ classdef brier_score
             % See also brier_score.boundaries.
             
             %% parse input
-            valid_types = {'annual', 'seasonal', 'monthly' };
-            if nargin>0 & ~any( strcmp( varargin{1}, valid_types ) )
+            valid_types = {'annual', 'seasonal', 'monthly', 'quarterly' };
+            if nargin>0 && ~any( strcmp( varargin{1}, valid_types ) )
                 error( 'BRIER:input', 'The inserted type is not valid.' );
             end
             
@@ -146,54 +149,55 @@ classdef brier_score
             q = size(quant, 2);
             st_year = min( tt.Time.Year );
             end_year = max( tt.Time.Year );
+            type_ = brier_score.type;
             
-            if strcmp( brier_score.type, 'annual' )
+            if strcmp( type_, 'annual' )
                 %% ANNUAL
                 tercile(1, :) = quantile( reshape(tt.Variables, 1, []), quant );
                 
-            elseif strcmp( brier_score.type, 'seasonal' )
+            elseif strcmp( type_, 'seasonal' )
                 %% SEASONAL
                 % 4 seasons
-                
+                tercile = nan(4, q);
                 % dates that divide the seasons
                 sd = [21, 3; 21, 6; 23, 9; 21, 12; 21, 3];
                 for seas = 1:4
-                    h = timetable; %empty
-                    
-                    if seas <4 %spring, summer and fall all fells during the year
-                        for year= st_year:end_year
-                            season = timerange( datetime( year, sd(seas, 2), sd(seas, 1) ), ... %start date
-                                datetime( year, sd(seas+1, 2), sd(seas+1, 1) ) );     %end date
-                            h = [ h; tt(season, :) ]; %#ok<*AGROW>
-                        end
-                    else    % winter falls between years.
-                        for year= st_year-1:end_year
-                            season = timerange( datetime( year, sd(seas, 2), sd(seas, 1) ), ... %start date
-                                datetime( year+1, sd(seas+1, 2), sd(seas+1, 1) ) );     %end date
-                            h = [ h; tt(season, :) ];
-                        end
+
+                    if seas <4
+                        season = [datetime( st_year:end_year, sd(seas,2), sd(seas,1) );
+                            datetime( st_year:end_year, sd(seas+1,2), sd(seas+1,1) )];
+                    else
+                        season = [datetime( st_year-1:end_year, sd(seas,2), sd(seas,1) );
+                            datetime( st_year:end_year+1, sd(seas+1,2), sd(seas+1,1) )];
                     end
+                    h = tt{any(tt.Time>= season(1,:) & tt.Time <season(2,:), 2), :};
                     
                     if ~isempty(h)
-                        tercile(seas, :) = quantile( reshape(h.Variables, 1, []), quant );
+                        tercile(seas, :) = quantile( h(:), quant );
                     end
                 end
                 
-            else
+            elseif strcmp( type_, 'monthly' )
                 %% MONTHLY
+                tercile = nan(12, q);
                 for mon = 1:12
-                    h = timetable;
-                    
-                    for year= st_year:end_year
-                        month = timerange( datetime( year, mon, 1), ... %start date
-                            datetime( year, mon, 1 )+calmonths(1) ) ;    %end date
-                        h = [ h; tt(month, :) ];
-                    end
+                    h = tt{tt.Time.Month == mon, :};
                     
                     if ~isempty(h)
-                        tercile(mon, :) = quantile( reshape(h.Variables, 1, []), quant );
+                        tercile(mon, :) = quantile( h(:), quant );
                     end
                 end
+            else
+                %% QUARTERLY 
+                tercile = nan(4, q);
+                for qrt = 1:4
+                    h = tt{any(tt.Time.Month == (qrt-1)*3+[1,2,3], 2) , :};
+                    
+                    if ~isempty(h)
+                        tercile(qrt, :) = quantile( h(:), quant );
+                    end
+                end
+                
             end
         end
         
@@ -223,10 +227,10 @@ classdef brier_score
             %if strcmp( brier_score.type, 'annual' )
             % ANNUAL
             % no change needed
-            
-            if strcmp( brier_score.type, 'seasonal' )
+            type_ = brier_score.type;
+            if strcmp( type_, 'seasonal' )
                 %% seasonal
-                temp_m = repmat(cell(1), 1, 1, 4);
+                temp_m = cell(1,1,4);
                 
                 % reshape per season
                 time_ = signal.Time;
@@ -260,7 +264,6 @@ classdef brier_score
                     end
                 end
                 
-                
                 % get longest
                 max_l = 0;
                 for seas = 1:4
@@ -272,65 +275,11 @@ classdef brier_score
                     temp_m{seas}(end+1:max_l, :) = nan;
                 end
                 temp = cell2mat( temp_m );
-                %{
-                % extract the season where it starts.
-                fd = signal.Time(1);
-                fy = signal.Time.Year(1);
-                if (fd >= datetime(fy , 3, 21) ) & (fd < datetime(fy, 6, 21) )
-                    % spring
-                    seas = 1;
-                    daysToNext = days(datetime(fy, 6, 21)-fd);
-                elseif (fd >= datetime(fy , 6, 21) ) & (fd < datetime(fy, 9, 23) )
-                    % summer
-                    seas = 2;
-                    daysToNext = days(datetime(fy, 9, 23)-fd);
-                elseif (fd >= datetime(fy , 9, 23) ) & (fd < datetime(fy, 12, 21) )
-                    % fall
-                    seas = 3;
-                    daysToNext = days(datetime(fy, 12, 21)-fd);
-                else
-                    % winter
-                    seas = 4;
-                    daysToNext(1) = days(datetime(fy, 3, 21)-fd);
-                    daysToNext(2) = days(datetime(fy+1, 3, 21)-fd);
-                    daysToNext = daysToNext( daysToNext>0 );
-                    daysToNext = min( daysToNext );
-                end
                 
-                % now go on for all the days in the time series
-                idx = 1;
-                while idx <= height( signal )
-                    outputArg(idx, 1) = sum(temp(idx, :) <= t(seas, 1))/nE;
-                    outputArg(idx, 2) = sum( (temp(idx, :) > t(seas, 1)) & ...
-                        (temp(idx, :) <= t(seas, 2)) , 2 )/nE;
-                    outputArg(idx, 3) = sum(temp(idx, :) > t(seas, 2))/nE;
-                    
-                    idx = idx+1;
-                    daysToNext = daysToNext -1;
-                    if daysToNext==0
-                        fd = signal.Time(idx);
-                        fy = signal.Time.Year(idx);
-                        if seas==1
-                            seas = 2;
-                            daysToNext = days(datetime(fy, 9, 23)-fd);
-                        elseif seas==2
-                            seas = 3;
-                            daysToNext = days(datetime(fy, 12, 21)-fd);
-                        elseif seas==3
-                            seas = 4;
-                            daysToNext = days(datetime(fy+1, 3, 21)-fd);
-                        else
-                            seas = 1;
-                            daysToNext = days(datetime(fy, 6, 21)-fd);
-                        end
-                    end
-                end
-                %}
-                
-            elseif strcmp( brier_score.type, 'monthly' )
+            elseif strcmp( type_, 'monthly' )
                 %% monthly
                 max_l = 0;
-                temp_m = repmat(cell(1), 1, 1, 12);
+                temp_m = cell(1,1,12);
                 
                 % reshape per month
                 for mon = 1:12
@@ -341,6 +290,23 @@ classdef brier_score
                 % fill the nans and then concatenate
                 for mon = 1:12
                     temp_m{mon}(end+1:max_l, :) = nan;
+                end
+                temp = cell2mat( temp_m );
+            elseif strcmp( type_, 'quarterly' )
+                %% quarterly
+                max_l = 0;
+                temp_m = cell(1,1,4);
+                
+                % reshape per quarter
+                for qrt = 1:4
+                    m_s = mod((qrt-1)*3+[2,3,4], 12)+1;
+                    temp_m{qrt} = temp( any(signal.Time.Month == m_s, 2), :);
+                    max_l = max( max_l, size( temp_m{qrt}, 1) );
+                end
+                
+                % fill the nans and concatenate
+                for qrt = 1:4
+                    temp_m{qrt}(end+1:max_l, :) = nan;
                 end
                 temp = cell2mat( temp_m );
             end
@@ -369,10 +335,10 @@ classdef brier_score
             %decompose divides the forecast into the different occurencies
             %that are possible and store it in r. It is a limited set by
             %definition. It also saves how many of them there are in the
-            %the whole set of the forecast. Moreover, it computes the
+            %the whole set of the forecast. Moreover, it computes d, the
             %average of the observation for that occurency.
             
-            if isempty( forecast ) | isempty( observation )
+            if isempty( forecast ) || isempty( observation )
                 % We reached the end of the recursion.
                 r = [];
                 d = [];
