@@ -23,7 +23,11 @@ classdef brier_score
             
             if any(size(f) ~= size(o))
                 error( 'BRIER:input', ...
-                    'Error. \nThe input must be defined in the same time period.' );
+                    'The input must be defined in the same time period.' );
+            end
+            if ~isnumeric(f) || ~isnumeric(o)
+                error( 'BRIER:input', ...
+                    'The input must be a numeric type.' );
             end
             
             % third dimension is the number of period in which the series is divided,
@@ -73,135 +77,139 @@ classdef brier_score
                     outputArg.unc(mdx) = nan;
                 end
             end
-            outputArg.type = brier_score.type;
         end
         
-        function outputArg = type( varargin )
-            %type is used for set or get how the boundaries are defined
-            %during the year.
-            %   There are 3 possible types of division of the year: -
-            %   annual: just one separation for the whole year. - seasonal:
-            %   one separation for each season. - monthly: one separation
-            %   for each month.
-            % See also brier_score.boundaries.
+        function code = validType( tp )
+            %valideType is a function to check the validity of the passed quantile
+            %division.
+            %   There are 6 possible types of division of the year: -
+            %   annual: just one separation for the whole year. 
+            %   - seasonal: one separation for each season, following the natural definition. 
+            %   - monthly: one separation for each month.
+            %   - quarterly: one separation for each quarter of the year( MAM, JJA,
+            %   SON, DJF )
+            %   tp = validType( tp ) throws an error if the inserted modality is not
+            %   valid.
             
             %% parse input
-            valid_types = {'annual', 'seasonal', 'monthly', 'quarterly' };
-            if nargin>0 && ~any( strcmp( varargin{1}, valid_types ) )
+            valid_types = {'annual', 'seasonal', 'monthly', 'quarterly', 'weekly', 'daily' };
+            if nargin<1 || ~any( strcmp( tp, valid_types ) )
                 error( 'BRIER:input', 'The inserted type is not valid.' );
             end
             
-            % persistent allows to save the variable between calls, since
-            % the method is static, there is just one istance of it always
-            % existing, but not global.
-            persistent type;
-            if nargin
-                type = varargin{1};
-                brier_score.boundaries( [] ); % reset boundaries to avoid errors
-            else
-                if isempty(type)
-                    error( 'BRIER:output', 'The type has not been inserted yet.' );
-                end
-            end
-            
-            outputArg = type;
+            code = find( strcmp( tp, valid_types )  );
         end
         
-        function outputArg = boundaries( varargin )
-            %boundaries set or get the boundaries that are used during the
-            %year.
-            %   The size for now is arbitrary. It should be one less than
-            %   the number of classes.
-            % See also brier_score.type.
-            
-            %%TODO check input( must be numeric
-            
-            persistent bound;
-            if nargin
-                bound = varargin{1};
-            else
-                if isempty(bound)
-                    error( 'BRIER:output', 'The boundaries have not been inserted yet.' );
-                end
-            end
-            
-            outputArg = bound;
-        end
-        
-        function tercile = extract_bounds(tt, quant)
+        function bnd = extract_bounds(tt, quant, type, varargin)
             %extract_bounds Allows to extract the quantiles for a given
             %timetable of historical observations.
             
             %% input parser
-            if ~istimetable( tt )
-                error( 'BRIER:input', ...
-                    'Error. \nThe input must be a Time Series object.' );
-            end
-            
-            if isempty( quant )
-                error( 'BRIER:input', ...
-                    'Error. \nThe input is empty.' );
-            elseif any(quant<=0 | quant >=1 )
-                error( 'BRIER:input', ...
-                    'Error. \nThe quantiles inserted are not valid.' );
-            end
-            
-            q = size(quant, 2);
-            st_year = min( tt.Time.Year );
-            end_year = max( tt.Time.Year );
-            type_ = brier_score.type;
-            
-            if strcmp( type_, 'annual' )
-                %% ANNUAL
-                tercile(1, :) = quantile( reshape(tt.Variables, 1, []), quant );
-                
-            elseif strcmp( type_, 'seasonal' )
-                %% SEASONAL
-                % 4 seasons
-                tercile = nan(4, q);
-                % dates that divide the seasons
-                sd = [21, 3; 21, 6; 23, 9; 21, 12; 21, 3];
-                for seas = 1:4
-
-                    if seas <4
-                        season = [datetime( st_year:end_year, sd(seas,2), sd(seas,1) );
-                            datetime( st_year:end_year, sd(seas+1,2), sd(seas+1,1) )];
-                    else
-                        season = [datetime( st_year-1:end_year, sd(seas,2), sd(seas,1) );
-                            datetime( st_year:end_year+1, sd(seas+1,2), sd(seas+1,1) )];
-                    end
-                    h = tt{any(tt.Time>= season(1,:) & tt.Time <season(2,:), 2), :};
-                    
-                    if ~isempty(h)
-                        tercile(seas, :) = quantile( h(:), quant );
-                    end
-                end
-                
-            elseif strcmp( type_, 'monthly' )
-                %% MONTHLY
-                tercile = nan(12, q);
-                for mon = 1:12
-                    h = tt{tt.Time.Month == mon, :};
-                    
-                    if ~isempty(h)
-                        tercile(mon, :) = quantile( h(:), quant );
-                    end
-                end
+            if istimetable( tt ) 
+                ts = tt.Time;
+                tt = tt.Variables;
+            elseif isnumeric(tt) && nargin > 3  && isdatetime(varargin{1}) && size(tt,1) == size(varargin{1}, 1)
+                ts = varargin{1};
+                %tt = tt
             else
-                %% QUARTERLY 
-                tercile = nan(4, q);
-                for qrt = 1:4
-                    h = tt{any(tt.Time.Month == (qrt-1)*3+[1,2,3], 2) , :};
-                    
-                    if ~isempty(h)
-                        tercile(qrt, :) = quantile( h(:), quant );
-                    end
-                end
+                error( 'BRIER:input', ...
+                    'The input must be a Timetable object or the 1st input a numeric matrix and the 4th a datetime array.' );
+            end
+            
+           if any(quant<0 | quant >1 )
+                error( 'BRIER:input', ...
+                    'The quantiles inserted are not valid, it must be a value between 0 and 1.' );
+           end
+           
+           brier_score.validType( type );
+           
+            %% extract bounds
+            % get a logic array of size [t, m] that for each coloumn extracts the
+            % datetime in the array that are for that division.
+            selectT = brier_score.timeSplitter( ts, type ); 
+            
+            q = size( quant , 2);
+            m = size( selectT,2);
+            
+            bnd = nan(m, q);
+            
+            for mdx = 1:m
+                % extract the variable for which I need the quantile
+                sig = tt(selectT(:,mdx),:);
                 
+                bnd(mdx, :) =  quantile( sig(:)' , quant );
             end
         end
         
-        function outputArg = parse( signal )
+        function msk = timeSplitter( ts, type )
+            %timeSplitter generates a logic array of size [t, k] where each column says
+            %which element need to be selected to split the time array with the selected splitting modality.
+            %   mask = brier_score.timeSplitter( time, modality )
+            %   returns a logic matrix of size [t, k] where t is the dimension of the
+            %   datetime array and k is set accordingly to the splitting criterion:
+            %   'annual'    : k=1,
+            %   'seasonal'  : k=4,
+            %   'monthly'   : k=12,
+            %   'quarterly' : k=4,
+            %   'weekly'    : k=52,
+            %   'daily'     : k=365.
+          
+            %% input check
+            if ~isdatetime( ts )
+               error( 'BRIER:input', ...
+                   'The input must be a Timetable object or the 1st input a numeric matrix and the 4th a datetime array.' );
+            end
+            
+            code = brier_score.validType( type );
+            
+            t = size(ts, 1);
+            %% switch
+            switch code
+                case 1
+                    % ANNUAL
+                    msk = true( t, 1);
+                    
+                case 2
+                    % SEASONAL
+                    % 4 seasons
+                    msk = false(t, 4);
+                    
+                    % dates that divide the seasons
+                    sd = [21, 3; 21, 6; 23, 9; 21, 12; 21, 3];
+                    st_year  = min( ts.Year );
+                    end_year = max( ts.Year );
+                    for seas = 1:4
+                        
+                        % datetime array of size [2, numberOfYears]
+                        if seas <4
+                            season = [datetime( st_year:end_year, sd(seas,2), sd(seas,1) );
+                                datetime( st_year:end_year, sd(seas+1,2), sd(seas+1,1) )];
+                        else
+                            season = [datetime( st_year-1:end_year, sd(seas,2), sd(seas,1) );
+                                datetime( st_year:end_year+1, sd(seas+1,2), sd(seas+1,1) )];
+                        end
+                        
+                        msk(:, seas) = any(ts>= season(1,:) & ts <season(2,:), 2);
+                    end
+                    
+                case 3
+                    % MONTHLY
+                    msk = ts.Month == 1:12;
+                    
+                case 4
+                    % QUARTERLY
+                    msk = false(t, 4);
+                    for qrt = 1:4
+                        msk(:,qrt) = any(ts.Month == mod((qrt-1)*3+[11,12,13],12)+1, 2);
+                    end
+               % case 5 weekly 
+               % case 6 daily
+                otherwise 
+                    fprintf( '%s not implemented yet\m', type );     
+            end
+        end
+        
+        function outputArg = parse( tt, bounds, type, keepLinear )
             %parse creates the array with the probabilities given the
             %timetable of the forecast or of the observation.
             % If a forecast with nE ensamble is passed as input the output
@@ -210,125 +218,60 @@ classdef brier_score
             % into an array for all the classes in which it is divided.
             
             %% parse input
-            if ~istimetable( signal )
+            if ~istimetable( tt )
                 error( 'BRIER:input', ...
-                    'Error. \nThe input must be a timetable object.' );
+                    'The first input must be a timetable object.' );
+            else
+                ts = tt.Time;
+                tt = tt.Variables;
             end
             
-            [~, nE] = size( signal);
-            %% get the boundaries
-            % if something its not set it will throw an error.
-            t = brier_score.boundaries;
-            [m, q] = size( t);
-            
-            %% dec
-            temp = signal.Variables;
-            
-            %if strcmp( brier_score.type, 'annual' )
-            % ANNUAL
-            % no change needed
-            type_ = brier_score.type;
-            if strcmp( type_, 'seasonal' )
-                %% seasonal
-                temp_m = cell(1,1,4);
-                
-                % reshape per season
-                time_ = signal.Time;
-                seas = 1; % before spring begin
-                fy = signal.Time.Year(1); % first year
-                sd = [21, 3; 21, 6; 23, 9; 21, 12; 21, 3]; % days that separate seasons
-                while ~isempty( temp )
-                    % get the array pos before the change of the season
-                    per = time_ < datetime(fy, sd(seas, 2), sd(seas, 1));
-                    
-                    % append the element of that season to the relative
-                    % season, I should use seas-1.
-                    if seas ~= 1
-                        temp_m{seas-1} = [temp_m{seas-1}; temp( per, : )];
-                    else
-                        % I can't index with 0, winter is 4
-                        temp_m{4} = [temp_m{4}; temp( per, : )];
-                    end
-                    
-                    % remove the used period
-                    time_(per, :) = [];
-                    temp( per, :) = [];
-                    
-                    % go to next season
-                    if seas <4
-                        seas = seas+1;
-                    else
-                        seas = 1;
-                        % again to spring, change year
-                        fy = fy +1;
-                    end
-                end
-                
-                % get longest
-                max_l = 0;
-                for seas = 1:4
-                    max_l = max( max_l, size(temp_m{seas}, 1) );
-                end
-                
-                % fill the nans and then concatenate
-                for seas = 1:4
-                    temp_m{seas}(end+1:max_l, :) = nan;
-                end
-                temp = cell2mat( temp_m );
-                
-            elseif strcmp( type_, 'monthly' )
-                %% monthly
-                max_l = 0;
-                temp_m = cell(1,1,12);
-                
-                % reshape per month
-                for mon = 1:12
-                    temp_m{mon} = temp( signal.Time.Month == mon, : );
-                    max_l = max( max_l, size(temp_m{mon}, 1) );
-                end
-                
-                % fill the nans and then concatenate
-                for mon = 1:12
-                    temp_m{mon}(end+1:max_l, :) = nan;
-                end
-                temp = cell2mat( temp_m );
-            elseif strcmp( type_, 'quarterly' )
-                %% quarterly
-                max_l = 0;
-                temp_m = cell(1,1,4);
-                
-                % reshape per quarter
-                for qrt = 1:4
-                    m_s = mod((qrt-1)*3+[2,3,4], 12)+1;
-                    temp_m{qrt} = temp( any(signal.Time.Month == m_s, 2), :);
-                    max_l = max( max_l, size( temp_m{qrt}, 1) );
-                end
-                
-                % fill the nans and concatenate
-                for qrt = 1:4
-                    temp_m{qrt}(end+1:max_l, :) = nan;
-                end
-                temp = cell2mat( temp_m );
+            if ~isnumeric( bounds )
+                error( 'BRIER:input', ...
+                    'The second input must be a numeric matrix.' );
             end
             
+            %% start the parsing
+            [nT, nE] = size( tt );
+            [m, q]   = size( bounds );
+            %checks also type
+            msk = brier_score.timeSplitter( ts, type );
+            if size(msk, 2) ~= m
+                error( 'BRIER:input', ...
+                    'Type and bounds dimension are not matching.' );
+            end
+            
+            % parse last input linear
+            if nargin > 3 && strcmp( keepLinear, 'linear' ) 
+                target1dArray = nT*ones(1, m);
+                target3dArray = ones(1, m); 
+                outputArg = nan(nT, q+1, 1);
+            elseif nargin == 3 || nargin > 3 && strcmp( keepLinear, 'fold' )
+                target1dArray = sum(msk, 1);
+                target3dArray = 1:m;
+                nM = max( target1dArray );    % the maximum amount of the day extracted in the same category
+                outputArg = nan(nM, q+1, m);
+            else
+                error( 'BRIER:input', ...
+                    'The last input must be one of the following strings: linear or fold.' );
+            end
+            
+            target2dArray = 1:q+1;
+            th = [-inf(m,1), bounds ,inf(m,1)]; % size [m, q+2]
             %% calculation
-            outputArg = nan( size( temp, 1 ), q+1, m );
-            
             for mdx = 1:m
-                s = temp(:, :, mdx);
-                sdx = ~isnan( s(:,1) );
                 
-                qdx = 1;
-                outputArg(sdx, qdx, mdx) = sum( s(sdx, :) <= t(mdx, 1), 2)/nE;
+                target1d = 1:target1dArray(mdx); % array from 1 to last element of the column, (nT if is linear, n for that type if fold)
+                target3d = target3dArray(mdx);
+                targetEx = msk(:,        mdx);
                 
-                for qdx = 2:q
-                    outputArg(sdx, qdx, mdx) = sum( (s(sdx, :) > t(mdx, qdx-1)) & (s(sdx, :) <= t(mdx, qdx)), 2)/nE;
+                for target2d = target2dArray
+                    outputArg(target1d, target2d, target3d) = sum( ...
+                        (tt(targetEx, :) > th(mdx, target2d)) & (tt(targetEx, :) <= th(mdx, target2d+1))...
+                        , 2)/nE;
                 end
-                
-                qdx = q+1;
-                outputArg(sdx, qdx, mdx) = sum(s(sdx, :) > t(mdx, q), 2)/nE;
             end
-            
+           
         end
         
         function [r, d, k] = decompose( forecast, observation )
@@ -384,13 +327,11 @@ classdef brier_score
                 outputArg.rel = nan(1,m);
                 outputArg.res = nan(1,m);
                 outputArg.unc = nan(1,m);
-                outputArg.type = "";
             else
                 outputArg.bs = [];
                 outputArg.rel = [];
                 outputArg.res = [];
                 outputArg.unc = [];
-                outputArg.type = "";
             end
         end
     end

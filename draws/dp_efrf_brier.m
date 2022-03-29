@@ -48,7 +48,7 @@ scoreLC = nan(q2tq, aTq, 4);
 for idx = q2tq+(1:q2tq)
     scoreLC(idx-q2tq, :, :) = cat(1 ,efrfBrierScores{idx, "LakeComo"}{1}(:,1).bs);
 end
-seq = {'MAM', 'JJA' , 'SON', 'DJF'};
+seq = {'DJF', 'MAM', 'JJA' , 'SON'};
 tiledlayout(2,2);
 for tr = 1:4
     nexttile;

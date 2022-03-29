@@ -172,14 +172,12 @@ for aggT = 1:length(aT)
         
         for stg =  1:length( bs_settings)
             
-            brier_score.type( bs_settings(stg).type )
+            bnd =  brier_score.extract_bounds( matchedData(:, "observation"), bs_settings(stg).quant, bs_settings(stg).type  );
             
-            brier_score.boundaries( brier_score.extract_bounds( matchedData(:, "observation"), bs_settings(stg).quant ) );
-            
-            obs_e = brier_score.parse( matchedData(:, "observation") );
+            obs_e = brier_score.parse( matchedData(:, "observation"), bnd, bs_settings(stg).type );
             
             for ref = 5:length(signalsnames)
-                for_e = brier_score.parse( matchedData(:, signalsnames(ref) ) );
+                for_e = brier_score.parse( matchedData(:, signalsnames(ref) ), bnd, bs_settings(stg).type );
                 p = brier_score.calculate(for_e, obs_e);
                 
                 efsrProbScores{bs_settings(stg).name, signalsnames(ref)}{1}(aggT, sT) = p;
@@ -196,11 +194,12 @@ for aggT = 1:length(aT)
                 
                 if ~bs_settings(stg).bias
                     %reset quantile
-                    brier_score.boundaries( brier_score.extract_bounds( matchedData(:, pos), bs_settings(stg).quant ) );
+                    bnd = brier_score.extract_bounds( matchedData(:, pos), bs_settings(stg).quant, bs_settings(stg).type );
                 end
-                for_e = brier_score.parse( matchedData(:, pos) );
+                for_e = brier_score.parse( matchedData(:, pos), bnd, bs_settings(stg).type  );
+                
                 p = brier_score.calculate(for_e, obs_e);
-
+                
                 efsrProbScores{bs_settings(stg).name, signalsnames(ref)}{1}(aggT, sT) = p;
             end
         end

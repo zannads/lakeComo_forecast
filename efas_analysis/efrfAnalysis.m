@@ -87,12 +87,12 @@ bs_settings(4).bias = false;
 bs_settings(4).quant = [1/3, 2/3];
 
 for idx = 1:length(bs_settings)
-bs_settings(idx).name = "bs_" + string(idx);
+    bs_settings(idx).name = "bs_" + string(idx);
 end
 
 signalsnames = [cat(2, efrfForecast.name), cat(2, benchmark.name) ];
 scoresnames = ["crps", cat(2, bs_settings.name)];
-    
+
 efrfProbScores = table('Size', [length(scoresnames), length(signalsnames)], ...
     'VariableTypes', repmat("cell", 1, length(signalsnames)),...
     'VariableNames', signalsnames, 'RowNames', scoresnames, ...
@@ -175,14 +175,12 @@ for aggT = 1:length(aT)
         
         for stg =  1:length( bs_settings)
             
-            brier_score.type( bs_settings(stg).type )
+            bnd =  brier_score.extract_bounds( matchedData(:, "observation"), bs_settings(stg).quant, bs_settings(stg).type  );
             
-            brier_score.boundaries( brier_score.extract_bounds( matchedData(:, "observation"), bs_settings(stg).quant ) );
-            
-            obs_e = brier_score.parse( matchedData(:, "observation") );
+            obs_e = brier_score.parse( matchedData(:, "observation"), bnd, bs_settings(stg).type );
             
             for ref = 5:length(signalsnames)
-                for_e = brier_score.parse( matchedData(:, signalsnames(ref) ) );
+                for_e = brier_score.parse( matchedData(:, signalsnames(ref) ), bnd, bs_settings(stg).type );
                 p = brier_score.calculate(for_e, obs_e);
                 
                 efrfProbScores{bs_settings(stg).name, signalsnames(ref)}{1}(aggT, sT) = p;
@@ -199,11 +197,12 @@ for aggT = 1:length(aT)
                 
                 if ~bs_settings(stg).bias
                     %reset quantile
-                    brier_score.boundaries( brier_score.extract_bounds( matchedData(:, pos), bs_settings(stg).quant ) );
+                    bnd = brier_score.extract_bounds( matchedData(:, pos), bs_settings(stg).quant, bs_settings(stg).type );
                 end
-                for_e = brier_score.parse( matchedData(:, pos) );
+                for_e = brier_score.parse( matchedData(:, pos), bnd, bs_settings(stg).type  );
+                
                 p = brier_score.calculate(for_e, obs_e);
-
+                
                 efrfProbScores{bs_settings(stg).name, signalsnames(ref)}{1}(aggT, sT) = p;
             end
         end
@@ -211,6 +210,6 @@ for aggT = 1:length(aT)
     
 end
 %%
-clear aggT aT bf df for_e idx jdx k matchedData obs obs_e oNan p pos pos_ 
+clear aggT aT bf df for_e idx jdx k matchedData obs obs_e oNan p pos pos_
 clear ref scoresnames signals signalsnames sT lT stg sTmax w
 clear efrfDetForecast
