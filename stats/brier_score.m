@@ -242,14 +242,21 @@ classdef brier_score
             end
             
             % parse last input linear
+            % target*Array are logic or numeric array to select the indexes of
+            % outputArg to save the information.
+            % target1dArray matrxi [nT, m] with logic array, each column selects the
+            % targets of where saving the point in time.
+            % target3dArray is a number containg the 3d dimension, aka the page where
+            % to save. If is linear we are keeping time dimension intact, otherwise if
+            % we are folding we need to select the correct page.
             if nargin > 3 && strcmp( keepLinear, 'linear' ) 
-                target1dArray = nT*ones(1, m);
+                target1dArray = msk;
                 target3dArray = ones(1, m); 
                 outputArg = nan(nT, q+1, 1);
             elseif nargin == 3 || nargin > 3 && strcmp( keepLinear, 'fold' )
-                target1dArray = sum(msk, 1);
+                target1dArray = (1:nT)'<=sum(msk, 1);
                 target3dArray = 1:m;
-                nM = max( target1dArray );    % the maximum amount of the day extracted in the same category
+                nM = max( sum(msk, 1) );    % the maximum amount of the day extracted in the same category
                 outputArg = nan(nM, q+1, m);
             else
                 error( 'BRIER:input', ...
@@ -261,9 +268,9 @@ classdef brier_score
             %% calculation
             for mdx = 1:m
                 
-                target1d = 1:target1dArray(mdx); % array from 1 to last element of the column, (nT if is linear, n for that type if fold)
-                target3d = target3dArray(mdx);
-                targetEx = msk(:,        mdx);
+                target1d = target1dArray(:,mdx); % array from 1 to last element of the column, (nT if is linear, n for that type if fold)
+                target3d = target3dArray(  mdx);
+                targetEx = msk(:,          mdx);
                 
                 for target2d = target2dArray
                     outputArg(target1d, target2d, target3d) = sum( ...
