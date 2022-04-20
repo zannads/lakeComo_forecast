@@ -12,20 +12,22 @@ classdef avgDeficitBeta <objFunction
         function obj = avgDeficitBeta( varargin )
             %AVGDEFICITBETA Construct an instance of this class
             %   Detailed explanation goes here
-            if nargin == 0 | mod(nargin, 2) ~= 0
-                obj.MEF = 0;
-                obj.demand = zeros(365,1);
-                obj.rain_weight = zeros(365,1);
-            else
-                param_flag = {'Demand', 'MEF', 'RainWeight' };
-                param_fc = {'setDemand', 'setMEF', 'setRW'};
-                
-                for idx = 1:length( param_flag )
-                    wh = find( strcmpi( param_flag{idx}, varargin), 1, 'first' );
+            
+            obj.MEF = 0;
+            obj.demand = zeros(365,1);
+            obj.rain_weight = [];
+            
+            param_flag = {'Demand', 'MEF', 'RainWeight' };
+            param_fc = {'setDemand', 'setMEF', 'setRW'};
+            
+            for idx = 1:length( param_flag )
+                wh = find( strcmpi( param_flag{idx}, varargin), 1, 'first' );
+                if ~isempty(wh)
                     obj = obj.(param_fc{idx})( varargin{wh+1} );
                     varargin( [wh, wh+1] ) = [];
                 end
             end
+            
         end
         
         function obj = setMEF( obj, param)
@@ -57,7 +59,11 @@ classdef avgDeficitBeta <objFunction
             d( d<0 ) = 0;
             
             %elevate to the requested power
-            d = d.^(2-obj.rain_weight(cday) );
+            if ~isempty( obj.rain_weight )
+                d = d.^(2-obj.rain_weight(cday) );
+            else
+                d(doy>=91 & doy<=283) = d.^2; % squared during summer, abs value rest of the year
+            end
             
             %average
             outputArg = mean(d, 1, 'omitnan');

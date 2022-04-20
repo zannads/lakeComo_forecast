@@ -7,6 +7,7 @@ classdef lake
         
         surface;
         lsv_rel;
+        rating_curve;
         ev;
         evap_rates;
         tailwater;
@@ -27,14 +28,14 @@ classdef lake
             obj.initial_condition =  ic;
         end
         
-        function ic = getInpitCond(obj)
+        function ic = getInitCond(obj)
             
             ic = obj.initial_condition;
         end
         
         %% integration
         
-        function [s, r] = integration(obj, HH, tt, s0, uu, n_sim, cday, ps, p )
+        function [s, r] = integration(obj, HH, tt, s0, uu, n_sim, cday, ps )
             
             sim_step = 60*60*24/HH; %sec/step
             
@@ -43,12 +44,12 @@ classdef lake
             
             for idx = 1:HH
                 %compute actual release
-                r(idx) = obj.actual_release( uu, s(idx), cday, p);
+                r(idx) = obj.actual_release( uu, s(idx), cday);
                 
                 %compute evaporation
                 if obj.ev == 1
                     
-                    a = obj.level2surface( obj.storage2level(s(idx), p) );
+                    a = obj.level2surface( obj.storage2level(s(idx) ) );
                     
                     e = obj.evap_rates(cday, :)/1000*a/86400;
                 elseif obj.ev > 1
@@ -68,19 +69,22 @@ classdef lake
             
         end
         
-        function r = actual_release(obj,  uu, s, cday, p)
-           
-            r = min( obj.max_release( s, cday, p), max( ...
-                obj.min_release( s, cday, p), reshape(uu, 1, 1, []) ) );
+        function r = actual_release(obj,  uu, s, cday )
+           % output matrix that is of dimension [lenght(s), lenght(cday), lenght(uu) ] 
+            
+            r = min( obj.max_release( s, cday ), max( ...
+                obj.min_release( s, cday ), reshape(uu, 1, 1, []) ) );
             
         end
         
-%         function outputArg = relToTailWater(obj,  r )
-%             
-%             if ~isempty( obj.tailwater )
-%                 outputArg = interp1( obj.tailwater(0), obj.tailwater(1), r);
-%             end
-%         end
+        function hd = relToTailWater(obj,  r )
+            
+            if ~isempty( obj.tailwater )
+                hd = interp1( obj.tailwater(1), obj.tailwater(2), r);
+            else 
+                hd = 0;
+            end
+        end
         
         function obj = setSurface( obj, a )
             obj.surface = a;

@@ -66,7 +66,7 @@ toc
 
 %% do simulation for the single objectives
 fprintf('simulation\n');
-s_init = LakeComo.level2storage(historical{ period(1), "h"});
+s_init = LakeComo.level2storage(historical{ period(1), "h"}, 0);
 
 sim_s = nan( n_t+1, n_j);
 sim_r = nan( n_t, n_j);
