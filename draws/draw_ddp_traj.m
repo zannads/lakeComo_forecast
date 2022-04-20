@@ -1,5 +1,5 @@
 ref_w = cat(1, ddpsol.flag_ref) >0;
-sel_w = 15;
+sel_w = [15, 86, 127];
 
 sim_h = cat(2, ddpsol.sim_h);
 sim_r = cat(2, ddpsol.sim_r);
@@ -48,7 +48,7 @@ if ~isempty(sel_w)
     title( "Selected solution - level - release trajectories" );
     
     nexttile;
-    plot([period;period(end)+1], [sim_r(:, sel_w);nan], 'LineWidth', 1.5);
+    plot([period;period(end)+1], [sim_r(:, sel_w);nan(1, length(sel_w))], 'LineWidth', 1.5);
     hold on;
     %plot( e);
     plot( repmat( aggregated_demand, 20, 1), '--', 'Color', [0.8500 0.3250 0.0980], 'LineWidth', 0.75 );

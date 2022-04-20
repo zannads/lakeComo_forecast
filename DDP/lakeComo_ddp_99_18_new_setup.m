@@ -98,6 +98,8 @@ for idx = 1:n_j
     end
 end
 clear zer eps1 idx
+%weights = eye(3);
+%n_j = 3;
 
 %this is the multiplier for the output of the objectives:
 % flood days(static low) is(are) defined as day/year so I divide by the
