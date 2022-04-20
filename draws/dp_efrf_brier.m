@@ -91,3 +91,16 @@ for mo = 1:12
         xticklabels(  q2t );
     end
 end
+figure;
+hold on;
+grid on
+title( 'Average Brier Score per month' );
+for idx = 1:aTq
+    plot( q2t, mean(scoreF(:,idx, :), 3), 'LineWidth', 2, 'Color', bGrad(idx, aTq) );
+    plot( q2t, mean(scoreLC(:,idx, :), 3), 'LineWidth', 2, 'Color', gGrad(idx, aTq) );
+    ylim( [0, 2]);
+    xlabel( 'quantile', 'FontSize', 14 );
+    ylabel( 'BS', 'FontSize', 14 );
+    xticks( q2t );
+    xticklabels(  q2t );
+end

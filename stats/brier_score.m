@@ -82,14 +82,17 @@ classdef brier_score
         function code = validType( tp )
             %valideType is a function to check the validity of the passed quantile
             %division.
-            %   There are 6 possible types of division of the year: -
-            %   annual: just one separation for the whole year. 
+            %   There are 6 possible types of division of the year:
+            %   - annual: just one separation for the whole year. 
             %   - seasonal: one separation for each season, following the natural definition. 
             %   - monthly: one separation for each month.
-            %   - quarterly: one separation for each quarter of the year( MAM, JJA,
-            %   SON, DJF )
-            %   tp = validType( tp ) throws an error if the inserted modality is not
-            %   valid.
+            %   - quarterly: one separation for each quarter of the year( DJF, MAM, JJA,
+            %   SON )
+            %   - weekly: one separetion for each week of the year.
+            %   - daily: one separation for each day of the year, leap day is used as
+            %   28th of february.
+            %   code = validType( tp ) throws an error if the inserted modality is not
+            %   valid, return the numeric code for the inserted modality
             
             %% parse input
             valid_types = {'annual', 'seasonal', 'monthly', 'quarterly', 'weekly', 'daily' };
@@ -151,7 +154,7 @@ classdef brier_score
             %   'seasonal'  : k=4,
             %   'monthly'   : k=12,
             %   'quarterly' : k=4,
-            %   'weekly'    : k=52,
+            %   'weekly'    : k=53,
             %   'daily'     : k=365.
           
             %% input check
@@ -202,8 +205,14 @@ classdef brier_score
                     for qrt = 1:4
                         msk(:,qrt) = any(ts.Month == mod((qrt-1)*3+[11,12,13],12)+1, 2);
                     end
-               % case 5 weekly 
-               % case 6 daily
+                case 5 
+                    % WEEKLY
+                    w = week( ts ); %returns the week-of-year numbers of the datetime values in t. The m output is a double array the same size as t and contains integer values from 1 to 53.
+                    msk = w == 1:53;
+                case 6 
+                    % DAILY
+                    doy = myDOY( ts );
+                    msk = doy == 1:365;
                 otherwise 
                     fprintf( '%s not implemented yet\m', type );     
             end
