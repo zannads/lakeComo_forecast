@@ -12,61 +12,76 @@ classdef model_lakecomo
         Nobj;               % number of objectives
         Nvar;               % number of variables
         initDay;            % first day of simulation
-        doy_file;     % day of the year (it includes leap years, otherwise doy is computed runtime in the simulation)
+        doy_file;           % day of the year (it includes leap years, otherwise doy is computed runtime in the simulation)
 
         Como_catch_param;
         ComoCatchment
         
-        ComoParam
-        LakeComo
+        Nex;                % number of exogneous signal to append to the BOP
+        ex_signal;          % matrix with exogenous signals, first dimension time, second == Nex
         
-        pParam
-        mPolicy
+        ComoParam;
+        LakeComo;
+        
+        pParam;
+        mPolicy;
         
         % objective function data
-        warmup;                                 % number of days of warmup before obj calculation starts
+        warmup;             % number of days of warmup before obj calculation starts
         level_areaFlood;    % level (cm) - flooded area in Como (m2)
-        demand;                      % total downstream demand (m3/s)
-        low;                      % total downstream demand
-        s_low;                      % total downstream demand
-        hreg;                      % total downstream demand
-        rain_weight;                      % total downstream demand
-        h_flo;       % flooding threshold
-        q_hp;        % downstream hydropower demand
-        inflow00;    % previous day inflow
+        demand;             % total downstream demand (m3/s)
+        low;                % value for low levels
+        s_low;              % value for static low obj func
+        hreg;               % total downstream demand
+        rain_weight;        % weight to affect the deficit cost function
+        h_flo;              % flooding threshold
+        q_hp;               % downstream hydropower demand
+        inflow00;           % previous day inflow
+        release00;          % previous day release for dam speed constraint, if negative constraint is not active. 
 
+        J;                  % cell array of cost functions 
     end
     
     methods
-        function obj = model_lakecomo()
+        function obj = model_lakecomo( filename )
             %MODEL_LAKECOMO Construct an instance of this class
             %   Detailed explanation goes here
             
             %read file settings
+            obj = obj.readFileSettings(filename);
+            
             %create cathcment and params
+            obj.ComoCatchment = load( obj.Como_catch_param.filename, '-ascii' );
+            obj.ComoCatchment = obj.ComoCatchment( 1:obj.Como_catch_param.col, 1:obj.Como_catch_param.row );
             
             obj.LakeComo = lakeComo();
             obj.LakeComo = obj.LakeComo.setEvap(0);
-            %MEF ??
+            %obj.LakeComo = obj.LakeComo.setMEF( load( 'file', '-ascii') );
+            obj.LakeComo = obj.LakeComo.setMEF( 22*ones(obj.H, 1) );
             obj.LakeComo = obj.LakeComo.setSurface( 1459000000 );
-            obj.LakeComo = obj.LakeComo.setInitCond( Como_param.initCond );
+            obj.LakeComo = obj.LakeComo.setInitCond( obj.ComoParam.initCond );
             
             %policy
             
             %objectives
-            %allyear
+            % single value
             obj.h_flo = 1.10;
             obj.q_hp = 150;
             
              %load only 365
-            obj.demand = load_file;
-            obj.low = load_file;
-            obj.s_low = load_file;
+            obj.demand = load( '~/Documents/Data/utils/aggregated_demand.txt', '-ascii' );
+            %obj.low = load( '~/Documents/Data/utils/low_l.txt', '-ascii' );
+            obj.s_low = load( '~/Documents/Data/utils/static_low.txt', '-ascii' );
             
             % load H days
-            obj.hreg = load_file;
-            obj.rain_weight = load_file;
+            %obj.hreg = load( '~/Documents/Data/utils/regulator.txt', '-ascii' );
+            %obj.rain_weight = load( '~/Documents/Data/utils/rain_weight_99_19_LD.txt', '-ascii' );
             
+            obj.J = {...
+                floodDays( obj.h_flo ); 
+                avgDeficitBeta( 'Demand', obj.demand, 'MEF', obj.LakeComo.getMEF ); ...
+                staticLow( obj.s_low ) ...
+                };
         end
         
         function outputArg = getNobj(obj)
@@ -75,17 +90,17 @@ classdef model_lakecomo
             outputArg = obj.Nobj;
         end
         
-%         function outputArg = getNvar(obj)
-%             %METHOD1 Summary of this method goes here
-%             %   Detailed explanation goes here
-%             outputArg = obj.Nvar;
-%         end
+        function outputArg = getNvar(obj)
+            %METHOD1 Summary of this method goes here
+            %   Detailed explanation goes here
+            outputArg = obj.Nvar;
+        end
 
-        function J = evaluate(obj) %, var)
+        function J = evaluate(obj, var)
             %obj.mPolicy = obj.mPolicy.setParameter(var);
             
             if obj.Nsim < 2
-                J = obj.simulate; %simulate(0);
+                J = obj.simulate(0);
             else
                 % MC simulation
             end
@@ -98,19 +113,18 @@ classdef model_lakecomo
         
         
         % function to perform the simulation over the scenario ps
-        function J = simulate(obj) %, ps)
+        function J = simulate(obj, ps)
             
             s = nan( obj.H+1, 1);
             h = nan( obj.H+1, 1);
-            u = nan( obj.H+1, 1);
-            r = nan( obj.H+1, 1);
+            u = nan( obj.H, 1);
+            r = nan( obj.H, 1);
             doy = nan( obj.H+1, 1);
             
             h_p = 0;
-            vr = nan;
-            deltaT = 60*60*24;
             
             qIn = nan;
+            r_1 = nan;
             
             uu = nan;
             input = nan;
@@ -119,85 +133,190 @@ classdef model_lakecomo
             
             % IC 
             qIn_1 = obj.inflow00;
+            r_1 = obj.release00;
             h(1) = obj.LakeComo.getInitCond;
             s(1) = obj.LakeComo.level2storage( h(1), h_p );
             
-            qIntot = load_file;
-            
            
-            for t = 1:H
+            for t = 1:obj.H
                 
                 %day
-                % doy(t) = ...
+                if obj.initDay > 0
+                    doy(t) = mod(obj.initDay+t-2, obj.T) +1;
+                else
+                    doy(t) = obj.doy_file(t);
+                end
                 
                 %inflow
-                qIn = qIntot(t);
+                qIn = obj.ComoCatchment(t, ps);
                 
                 % decision for policy
                 %...
                 
                 u(t) = 0;
                 
-                % constraint on speed of manouver
-                % look on c++ for more info
-                if h(t) > 0.8
-                    vr = 360;
-                else 
-                    vr = 240;
-                end
-                
-                [ss, rr] = obj.LakeComo.integration( obj.integStep, t, s(t), u(t), qIn, doy(t), ps, h_p );
-                
-                if t > 1 & ( r(t)+vr <= rr )
-                    r(t+1) = r(t) +vr;
-                    s(t+1) = s(t) +(qIn-r(t+1))*deltaT;
+                if obj.release00 > 0
+                    [s(t+1), r(t)] = obj.LakeComo.integration( obj.integStep, t, s(t), u(t), qIn, doy(t), ps, h_p, r_1 );
                 else
-                   %without manouver constraint
-                   r(t+1) = rr;
-                   s(t+1) = ss;
+                    [s(t+1), r(t)] = obj.LakeComo.integration( obj.integStep, t, s(t), u(t), qIn, doy(t), ps, h_p, 10000 );
                 end
+                
+                r_1 = r(t);
+                qIn_1 = qIn;
                 
             end
             %save output 
+            h = obj.LakeComo.storage2level( s, h_p );
+            doy(end) = mod(doy(end-1), obj.T) +1;
+            
             
             % remove warmup
+            if obj.warmup > 0
+                h(1:1+obj.warmup) = [];
+                s(1:1+obj.warmup) = [];
+                r(1:1+obj.warmup) = [];
+            end
             
             %compute objectives 
             N_years = obj.H/obj.T;
-            J(1) = obj.floodDays( h, obj.h_flo )/N_years;
-            J(2) = obj.avgDeficitBeta( r, obj.demand, obj.rain_weight, doy );
-            J(3) = obj.staticLow( h, obj.s_low, doy )/N_years;
+            J(1) = obj.J{1}.evaluate( h(2:end) )/N_years;
+            J(2) = obj.J{2}.evaluate( r, 1:obj.H, doy(1:end-1) );
+            J(3) = obj.J{3}.evaluate( h(2:end), doy(2:end) )/N_years;
         end
         
-        %% Functions to compute the objective functions:
-         function outputArg =  floodDays(~, h, h_flo )
-             
-             outputArg = sum( double( h > h_flo ), 1 );
-         end
-         
-         function outputArg =  avgDeficitBeta(obj, q, w, rain_weight)
-             
-             %remove MEF
-             d = q - obj.LakeComo.getMEF;
-             
-             %negative values are not allowed, thus set to 0.
-             d( d<0 ) = 0;
-             
-             %deficit, w demand must already be shifted by one day
-             d = w-d;
-             d( d<0 ) = 0;
-             
-             %elevate to the requested power
-             d = d.^rain_weight;
-             
-             %average 
-             outputArg = mean(d, 1);
-         end
-         
-         function outputArg =  staticLow(~, h, h_ls)
-             
-             outputArg = sum( double( h < h_ls ), 1 );
-         end
+        function obj = readFileSettings(obj, filename )
+            
+            filedir = fileparts( filename );
+            
+            fid = fopen( filename, 'r' );
+            if fid == -1
+                error( 'ModelLakeComo:wrongInput', ...
+                    'Input settings file not found.' );
+            end
+            
+            obj.Nsim = searchTagSettings(obj, fid, '<NUM_SIM>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.NN = searchTagSettings(obj, fid, '<DIM_ENSEMBLE>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.T = searchTagSettings(obj, fid, '<PERIOD>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.integStep = searchTagSettings( obj, fid, '<INTEGRATION>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.H = searchTagSettings( obj, fid, '<SIM_HORIZON>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.Nobj = searchTagSettings( obj, fid, '<NUM_OBJ>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.Nvar = searchTagSettings( obj, fid, '<NUM_VAR>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.warmup = searchTagSettings( obj, fid, '<WARMUP>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.initDay = searchTagSettings( obj, fid, '<DOY>' );
+            if obj.initDay == 0
+                tline = fgetl( fid );
+                spline = split( tline );
+                % remove initial spaces if present
+                while isempty(spline{1})
+                    spline(1) = [];
+                end
+                obj.doy_file = load( fullfile( filedir, spline{1} ) , '-ascii' );
+            end
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.Como_catch_param.CM = searchTagSettings( obj, fid, '<CATCHMENT>' );
+            tline = fgetl( fid );
+            spline = split( tline );
+            % remove initial spaces if present
+            while isempty(spline{1})
+                spline(1) = [];
+            end
+            obj.Como_catch_param.filename = fullfile( filedir, spline{1} );
+            obj.Como_catch_param.row = 1;
+            obj.Como_catch_param.col = obj.H;
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            try %since it has been implemented later
+                obj.Nex = searchTagSettings( obj, fid, '<ESIGNALS>' );
+                obj.ex_signal = nan( obj.H, obj.Nex );
+                for idx = 1:obj.Nex
+                    tline = fgetl( fid );
+                    spline = split( tline );
+                    while isempty(spline{1})
+                        spline(1) = [];
+                    end
+                    tempsig = load( fullfile( filedir, spline{1})  , '-ascii');
+                    obj.ex_signal(:,idx) = tempsig(1:obj.H, 1);
+                    clear tempsig
+                end
+            catch
+                obj.Nex = 0;
+                obj.ex_signal = nan( obj.H, obj.Nex );
+            end
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.ComoParam.initCond = searchTagSettings( obj, fid, '<INIT_CONDITION>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.inflow00 = searchTagSettings( obj, fid, '<INIT_INFLOW>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.release00 = searchTagSettings( obj, fid, '<INIT_RELEASE>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.pParam.tPolicy = searchTagSettings( obj, fid, '<POLICY_CLASS>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.pParam.policyInput = searchTagSettings( obj, fid, '<NUM_INPUT>' );
+            for idx = 1:obj.pParam.policyInput
+                tline = fgetl( fid );
+                spline = split( tline );
+                while isempty(spline{1})
+                    spline(1) = [];
+                end
+                obj.pParam.mIn(idx) = str2double(spline{1});
+                spline(1) = [];
+                obj.pParam.MIn(idx) = str2double(spline{1});
+                spline(1) = [];
+            end
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.pParam.policyOutput = searchTagSettings( obj, fid, '<NUM_OUTPUT>' );
+            for idx = 1:obj.pParam.policyOutput
+                tline = fgetl( fid );
+                spline = split( tline );
+                while isempty(spline{1})
+                    spline(1) = [];
+                end
+                obj.pParam.mOut(idx) = str2double(spline{1});
+                spline(1) = [];
+                obj.pParam.MOut(idx) = str2double(spline{1});
+                spline(1) = [];
+            end
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            obj.pParam.policyStr = searchTagSettings( obj, fid, '<POLICY_STRUCTURE>' );
+            fseek( fid, 0, -1 ); % go back to bof
+            
+            fclose( fid );
+        end
+        
+        function value = searchTagSettings(~, fid, tag )
+            tline = 'a b c';
+            spline = split( tline );
+            while ~strcmp( spline{1}, tag )
+                tline = fgetl( fid );
+                spline = split( tline );
+            end
+            
+            value = str2double( spline{2} );
+        end
+        
     end
 end
-

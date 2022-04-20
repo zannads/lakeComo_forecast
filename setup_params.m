@@ -1,8 +1,7 @@
 %ADD PATHS AND CONSTANTS
 
 global raw_data_root;
-raw_data_root = fullfile('~/Documents/Data');
-addpath( raw_data_root );
+raw_data_root = '~/Documents/Data';
 
 Fuentes = struct( 'Lon', 9.412760, 'Lat', 46.149950);
 Fuentes.fname = "Fuentes";
@@ -24,17 +23,3 @@ locations = [Fuentes, Mandello, LakeComo, Olginate];
 clear Fuentes Olginate LakeComo Mandello
 
 std_aggregation = [caldays([1, 3, 5, 7:7:28])'; calmonths(1); caldays([42, 56])'; calmonths(2:7)'];
-
-path_ = fullfile( cd, 'data_parser' );
-addpath( path_ );
-path_ = fullfile( cd, 'stats' );
-addpath( path_ );
-path_ = fullfile( cd, 'draws' );
-addpath( path_ );
-path_ = fullfile( cd, 'DDP' );
-addpath( path_ );
-path_ = fullfile( cd, 'ivs' );
-addpath( path_ );
-path_ = fullfile( cd, 'lakeComo_model' );
-addpath( path_ );
-clear path_;
