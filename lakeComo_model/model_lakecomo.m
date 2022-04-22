@@ -58,10 +58,20 @@ classdef model_lakecomo
             obj.LakeComo = obj.LakeComo.setEvap(0);
             %obj.LakeComo = obj.LakeComo.setMEF( load( 'file', '-ascii') );
             obj.LakeComo = obj.LakeComo.setMEF( 22*ones(obj.H, 1) );
-            obj.LakeComo = obj.LakeComo.setSurface( 1459000000 );
+            obj.LakeComo = obj.LakeComo.setSurface( 145900000 );
             obj.LakeComo = obj.LakeComo.setInitCond( obj.ComoParam.initCond );
             
             %policy
+            if obj.pParam.tPolicy == 4
+                obj.mPolicy = ncRBF( obj.pParam.policyInput, obj.pParam.policyOutput, obj.pParam.policyStr );
+            else
+                
+            end
+            
+            obj.mPolicy = obj.mPolicy.setMaxInput( obj.pParam.MIn );
+            obj.mPolicy = obj.mPolicy.setMaxOutput( obj.pParam.MOut );
+            obj.mPolicy = obj.mPolicy.setMinInput( obj.pParam.mIn );
+            obj.mPolicy = obj.mPolicy.setMinOutput( obj.pParam.mOut );
             
             %objectives
             % single value
@@ -97,10 +107,23 @@ classdef model_lakecomo
         end
 
         function J = evaluate(obj, var)
-            %obj.mPolicy = obj.mPolicy.setParameter(var);
+            obj.mPolicy = obj.mPolicy.setParameters(var);
             
             if obj.Nsim < 2
-                J = obj.simulate(0);
+                J = obj.simulate(1); % 0 in c++ means 1 in MATLAB
+            else
+                % MC simulation
+            end
+            
+            %obj.mPolicy = obj.mPolicy.clearParameter;
+        end
+        
+        function J = evaluateFromFile(obj, policyfile)
+            var = load( policyfile, '-ascii' );
+            obj.mPolicy = obj.mPolicy.setParameters(var);
+            
+            if obj.Nsim < 2
+                J = obj.simulate(1); % 0 in c++ means 1 in MATLAB
             else
                 % MC simulation
             end
@@ -126,8 +149,7 @@ classdef model_lakecomo
             qIn = nan;
             r_1 = nan;
             
-            uu = nan;
-            input = nan;
+            input = nan(1, obj.Nex+3);
             
             J = nan( obj.getNobj, 1);
             
@@ -151,23 +173,33 @@ classdef model_lakecomo
                 qIn = obj.ComoCatchment(t, ps);
                 
                 % decision for policy
-                %...
+                input(1) = sin( 2*pi*doy(t)/obj.T );
+                input(2) = cos( 2*pi*doy(t)/obj.T );
+                input(3) = h(t);
+                for idx = 1:obj.Nex
+                    input(3+idx:end) =obj.ex_signal(t, :);
+                end
                 
-                u(t) = 0;
+                u(t) = obj.mPolicy.get_NormOutput(input);
                 
                 if obj.release00 > 0
                     [s(t+1), r(t)] = obj.LakeComo.integration( obj.integStep, t, s(t), u(t), qIn, doy(t), ps, h_p, r_1 );
                 else
                     [s(t+1), r(t)] = obj.LakeComo.integration( obj.integStep, t, s(t), u(t), qIn, doy(t), ps, h_p, 10000 );
                 end
+                h(t+1) = obj.LakeComo.storage2level( s(t+1), h_p );
                 
                 r_1 = r(t);
                 qIn_1 = qIn;
-                
+                 
             end
             %save output 
-            h = obj.LakeComo.storage2level( s, h_p );
-            doy(end) = mod(doy(end-1), obj.T) +1;
+            
+            if doy(end-1) == 365
+                doy(end) = 1;
+            else
+                doy(end) = doy(end-1)+1;
+            end
             
             
             % remove warmup
@@ -200,7 +232,7 @@ classdef model_lakecomo
             obj.NN = searchTagSettings(obj, fid, '<DIM_ENSEMBLE>' );
             fseek( fid, 0, -1 ); % go back to bof
             
-            obj.T = searchTagSettings(obj, fid, '<PERIOD>' );
+            obj.T = floor(searchTagSettings(obj, fid, '<PERIOD>' ));
             fseek( fid, 0, -1 ); % go back to bof
             
             obj.integStep = searchTagSettings( obj, fid, '<INTEGRATION>' );

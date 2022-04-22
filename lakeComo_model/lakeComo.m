@@ -153,7 +153,7 @@ classdef lakeComo < lake
         end
         
         function r = actual_release(obj, uu, s, cday, p, q )
-            narginchk(3,5);
+            narginchk(4,6);
             
             cday = cday(:);   % make vertical
             n_t = length(cday);

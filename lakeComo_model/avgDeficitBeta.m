@@ -62,7 +62,7 @@ classdef avgDeficitBeta <objFunction
             if ~isempty( obj.rain_weight )
                 d = d.^(2-obj.rain_weight(cday) );
             else
-                d(doy>=91 & doy<=283) = d.^2; % squared during summer, abs value rest of the year
+                d(doy>=91 & doy<=283) = d(doy>=91 & doy<=283).^2; % squared during summer, abs value rest of the year
             end
             
             %average
