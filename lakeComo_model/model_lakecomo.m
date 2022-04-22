@@ -106,16 +106,17 @@ classdef model_lakecomo
             outputArg = obj.Nvar;
         end
 
-        function J = evaluate(obj, var)
+        function [J, h, r] = evaluate(obj, var)
             obj.mPolicy = obj.mPolicy.setParameters(var);
             
             if obj.Nsim < 2
-                J = obj.simulate(1); % 0 in c++ means 1 in MATLAB
+                [J, h, r] = obj.simulate(1); % 0 in c++ means 1 in MATLAB
             else
                 % MC simulation
             end
             
-            %obj.mPolicy = obj.mPolicy.clearParameter;
+            %obj.mPolicy = obj.mPolicy.clearParameters;
+            % automatically deleted as you don't return obj
         end
         
         function J = evaluateFromFile(obj, policyfile)
@@ -128,7 +129,7 @@ classdef model_lakecomo
                 % MC simulation
             end
             
-            %obj.mPolicy = obj.mPolicy.clearParameter;
+            %obj.mPolicy = obj.mPolicy.clearParameters;
         end
     end
     
@@ -136,7 +137,7 @@ classdef model_lakecomo
         
         
         % function to perform the simulation over the scenario ps
-        function J = simulate(obj, ps)
+        function [J, h, r] = simulate(obj, ps)
             
             s = nan( obj.H+1, 1);
             h = nan( obj.H+1, 1);
@@ -146,14 +147,12 @@ classdef model_lakecomo
             
             h_p = 0;
             
-            qIn = nan;
-            r_1 = nan;
-            
             input = nan(1, obj.Nex+3);
             
             J = nan( obj.getNobj, 1);
             
             % IC 
+            qIn = nan;
             qIn_1 = obj.inflow00;
             r_1 = obj.release00;
             h(1) = obj.LakeComo.getInitCond;
