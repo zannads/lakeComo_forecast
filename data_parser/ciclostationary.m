@@ -31,7 +31,7 @@ for idx = 1:365
    ciclo( idx, 2 ) = pf.sigma^2;
 end
 
-ciclo = array2timetable( ciclo, 'RowTimes', Time(1:365), 'VariableNames', {'dis24', 'var24'} );
+ciclo = array2timetable( ciclo, 'RowTimes', Time(1:365), 'VariableNames', {'mu', 'var'} );
 ciclo = sortrows( ciclo );
 
 end

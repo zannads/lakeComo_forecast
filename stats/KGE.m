@@ -5,7 +5,7 @@ function outputArg = KGE( s, o, varargin)
 %   The other fields are the usual decomposition r, alpha, beta.
 %   k = KGE( s, o, 'Standard' ) behaves like k = KGE( s, o ).
 %   k = KGE( s, 0, 'Modified' ) creates an output with fields:
-%   -nse
+%   -kge'
 %   -r
 %   -gamma
 %   -beta

@@ -11,14 +11,14 @@ function outputArg = detCoeff( s, o )
 % linear correlation coefficient
 R = corrcoef( s, o );
 r = R(2);
-if abs(r) < 10^-3 | isnan(r)    %to avoid nan and small numerical errors
+if abs(r) < 10^-3 || isnan(r)    %to avoid nan and small numerical errors
     r = 0;
 end
 outputArg.r = r; 
 %the element off diagonal is the correlation coefficient between the two
 %series, the elements in the diagonal are 1. 
 sigma_s = std( s );
-if abs(sigma_s) < 10^-3 | isnan(sigma_s)
+if abs(sigma_s) < 10^-3 || isnan(sigma_s)
     sigma_s = 0;
 end
 sigma_o = std( o );
