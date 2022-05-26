@@ -176,7 +176,7 @@ classdef model_lakecomo
                 input(2) = cos( 2*pi*doy(t)/obj.T );
                 input(3) = h(t);
                 for idx = 1:obj.Nex
-                    input(3+idx:end) =obj.ex_signal(t, :);
+                    input(1, 3+idx) =obj.ex_signal(t, idx);
                 end
                 
                 u(t) = obj.mPolicy.get_NormOutput(input);
@@ -286,7 +286,7 @@ classdef model_lakecomo
                     obj.ex_signal(:,idx) = tempsig(1:obj.H, 1);
                     clear tempsig
                 end
-            catch
+            catch e
                 obj.Nex = 0;
                 obj.ex_signal = nan( obj.H, obj.Nex );
             end
