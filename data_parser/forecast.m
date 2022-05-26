@@ -305,6 +305,7 @@ classdef forecast
                 % add one for the last measurement
                 gap_time(end+1) = datetime(obj.time(end).Year+1, 1, 1)-obj.time(end);
                 missing_dates = days( gap_time )-1;
+                missing_dates = min( missing_dates, min(obj.leadTime-1, max(missing_dates(1:end-1)) ) );
             else
                 missing_dates = zeros(n_t, 1);
             end
