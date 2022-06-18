@@ -8,9 +8,15 @@ function outputArg = matlabize_solution( filePath , forceReference, forceMetric)
     %           settings_file:      problem file settings path and name 
     %           reference:          matrix NxNobj with the reference set
     %                               extracted from all the seeds
-    %           metrics:            Array with Hypervolume GenerationalDistance
-    %                               InvertedGenerationalDistance Spacing
-    %                               EpsilonIndicator MaximumParetoFrontError
+    %           metrics:            struct with 
+    %                       Hypervolume
+    %                       GenerationalDistance
+    %                       InvertedGenerationalDistance 
+    %                       Spacing
+    %                       EpsilonIndicator 
+    %                       MaximumParetoFrontError
+    %                       Dmin 
+    %                       Davg
     %           seed:               array of sruct for each seed in the
     %                               simulation, composed of:
     %
@@ -32,27 +38,44 @@ function outputArg = matlabize_solution( filePath , forceReference, forceMetric)
     end
     
     % load settings_file or better is to save name to create the model after
-    stF = ls( '~/Documents/Data/EMODPS_solutions/BOP/output/settings*' );
+    stF = ls( [filePath, '/output/settings*'] );
     outputArg.settings_file = stF(1:end-1); %remove the /n that is appended by ls
     clear stF
     
     % load reference set
     if forceReference || ~exist( fullfile( filePath, 'output', 'optComo_borg.reference' ), 'file' )
-        system( ['~/Documents/LakeComo_EMODPS/MOEAFramework/borg_reference.sh ', filePath] )
+        here = cd();
+        cd('~/Documents/LakeComo_EMODPS/MOEAFramework');
+        system( ['./borg_reference.sh ', filePath] )
+        cd(here);
     end
     outputArg.reference = load( fullfile( filePath, 'output', 'optComo_borg.reference' ), '-ascii' );
     
     % load metrics
+    target = [4.45, 1.082067011416135e+03, 9.85]; 
+    %normalization
+    normOBJ = [10, 500, 40];
+    
     if forceMetric || ~exist( fullfile( filePath, 'output', 'optComo_borg.metrics' ), 'file' )
-        system( ['~/Documents/LakeComo_EMODPS/MOEAFramework/run_final_metric.sh ', filePath] )
+        here = cd();
+        cd('~/Documents/LakeComo_EMODPS/MOEAFramework');
+        system( ['./run_final_metric.sh ', filePath] )
+        cd(here)
     end
     fid = fopen( fullfile( filePath, 'output', 'optComo_borg.metrics' ), 'r' );
     fgetl( fid ); % dump the first row with the names
     tline = fgetl( fid ); % get the values
     nline = str2double( split( tline, ' ', 2 ) ); % transfrom in double
+    fclose(fid);
     
-    
-    outputArg.metrics = nline;
+    outputArg.metrics.Hypervolume = nline(1);
+    outputArg.metrics.GenerationalDistance = nline(2);
+    outputArg.metrics.InvertedGenerationalDistance = nline(3);
+    outputArg.metrics.Spacing = nline(4);
+    outputArg.metrics.EpsilonIndicator = nline(5);
+    outputArg.metrics.MaximumParetoFrontError = nline(6);
+    outputArg.metrics.Dmin = Dmin( outputArg.reference./normOBJ, target./normOBJ );
+    outputArg.metrics.Davg = Davg( outputArg.reference./normOBJ, target./normOBJ );
     
     
     % load seeds
