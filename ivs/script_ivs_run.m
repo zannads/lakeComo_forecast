@@ -19,10 +19,12 @@
 %% Set workspace
 %clear
 %clc
-%setup_params
+setup_params
 
 %% Load and prepare data
-ddp_solution = 86;
+%ddp_solution = 86;
+Res = false; %work on residual of BOP or not
+
 % I use my own function to produce the data to use in the script so as to
 % change the minum amount of code possible.
 c_v = dir( fullfile(raw_data_root, 'candidate_variables_99_18', '*.txt') );
@@ -39,17 +41,18 @@ output_file = fullfile( raw_data_root, 'ddp_trajectories_99_18', ['release_sol',
 data = compact_files( [c_v;storage_file;doy_file;output_file] );
 
 clear storage_file doy_file output_file
-[~, c_v, ~] = fileparts(c_v); % rename c_v for print
+[~, c_v, ~] = fileparts(c_v);    % rename c_v for print
 c_v = [c_v; 'storage_t'; 'd_t']; % add the other candidate variables name;
+
 %% Set the parameters for the Extra-Trees and the IIS
 % extra tree
 rpar.M    = 500; % number of extra trees in the forest
-%rpar.nmin = 15;   % number of points per leaf
+rpar.nmin = 15;   % number of points per leaf
 rpar.k    = size(data, 2)-1;  % Number of random cuts -> number of candidate variables
 
 % IIS
 rpar.ns = 8;         % number of folds
-rpar.p  = 10;         % number of SISO models evaluated at each iteration 
+rpar.p  = 7;         % number of SISO models evaluated at each iteration 
 rpar.epsilon  = 0;   % tolerance
 rpar.max_iter = 5;   % maximum number of iterations
 
@@ -60,11 +63,19 @@ rpar.mult_runs = 5; % number of runs for the IIS algorithm
 % Run the IIS algorithm
 %results_iis_n = cell(1, rpar.mult_runs);
 clear results_iis_n
+if Res 
+    %fit variable for working on the residual or not
+    % storage and doy last 2
+    fit =  [length(c_v)-1, length(c_v)];
+else
+    fit = [];
+end
+
 for i = 1:rpar.mult_runs
     fprintf( 'Run #%d\n',i );
     % Shuffle the data
     data_sh = shuffle_data(data);
-    results_iis_n(i) = iterative_input_selection(data_sh,rpar, 1, [length(c_v)-1, length(c_v)], 'Name', c_v);
+    results_iis_n(i) = iterative_input_selection(data_sh,rpar, 1, fit, 'Name', c_v);
     clear data_sh 
 end
 
@@ -82,13 +93,16 @@ for i = 1:rpar.mult_runs
     end
 end
 
-
+if Res
+    base = 'ivsRes_';
+else
+    base = 'ivs_';
+end
 name = fullfile(raw_data_root, 'ivs_solutions', strcat('sol', int2str(ddp_solution)), ...
-    strcat('ivsRes_',code,'_sol',int2str(ddp_solution),'_n', int2str(rpar.nmin), '.mat') );
+    strcat(base,code,'_sol',int2str(ddp_solution),'_n', int2str(rpar.nmin), '.mat') );
 % if exist( name, 'file' )
 %     name(end-3:end+2) = '_2.mat';
 % end
 save( name, 'c_v', 'rpar', 'results_iis_n' );
 clear name i k iterS X R2 R2_res 
-% This code has been written by Stefano Galelli and Riccardo Taormina.
-% Updated by Dennis Zanutto
+% This code has been written by Dennis Zanutto
