@@ -10,7 +10,8 @@ redo_meanAnomaly    = false;
 redo_qtD            = false;
 redo_pI             = false;
 redo_pIAnomaly      = false;
-redo_det            = true;
+redo_det            = false;
+redo_allefrf        = true;
 
 qt2gen = 0.1:0.1:0.9;
 %%
@@ -379,6 +380,34 @@ if redo_det
         fclose(fid);
     end
 end
+%%
+sign2w = zeros(7305,42);
+fid = fopen( "LakeComo_efrf_all_anom.txt", 'w');
+for idx = 3 % location iter
+    for aT_ = 1:42 %agg time iter
+        ts = efrfForecast(idx).getTimeSeries( aT_, 0, true);
+        ts = array2timetable( mean( ts.Variables, 2), 'RowTimes', ts.Time );
+        
+        %get one realization(365 d) of ciclostationary mean of release
+        csShort = ciclostationary( ts ); 
+        %get ciclo per time
+        cs = cicloseriesGenerator( csShort, ts.Time );
+        
+        %add_day = [mean(tsShort{tsShort.Time.Day==1 & tsShort.Time.Month==1 , :},1);
+           % mean(tsShort{tsShort.Time.Day==2 & tsShort.Time.Month==1 , :},1)];
+        
+        %ts = [array2timetable(add_day, 'RowTimes', datetime(1999,1,1):datetime(1999,1,2), 'VariableNames', tsShort.Properties.VariableNames);
+         %   tsShort];
+        %extract ciclo
+        %tsMean = array2timetable( mean( ts.Variables, 2), 'RowTimes', ts.Time );
+            
+        sign2w(3:end, aT_) = ts.Variables-cs.(1);
+    end
+end
+fprintf( fid, '%d\n', sign2w(:) ); % I save above
+fclose(fid);
+        
 
+%%
 clear add_day aT aT_ fid idx qt qt2gen redo_maxmin redo_mean redo_meanAnomaly redo_qtA mm
 clear redo_qtA redo_qtM redo_var sign2w ts tsShort ans tsMean redo_qtD redo_pI redo_pIAnomaly

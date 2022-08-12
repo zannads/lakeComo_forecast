@@ -8,7 +8,7 @@ benchmark = [averageForecast, cicloForecast.prob2det( 'average' ), conForecast];
 %% prob
 % create settings
 quant2test = [1/20, 1/10:1/10:9/10, 19/20];
-bs_settings(1,3*length(quant2test)) = struct('type', [], 'bias', [], 'quant', [], 'name', [] );
+bs_settings(1,8*length(quant2test)) = struct('type', [], 'bias', [], 'quant', [], 'name', [] );
 UB_B = ["U", "B"];
 for idx = 1:length(quant2test)
     bs_settings(idx).type = 'annual';
@@ -27,6 +27,41 @@ for idx = 1:length(quant2test)
     jdx = idx+2*length(quant2test);
     bs_settings(jdx).type = 'monthly';
     bs_settings(jdx).bias = false;
+    bs_settings(jdx).quant = quant2test(idx);
+    bs_settings(jdx).name = UB_B(bs_settings(jdx).bias+1) + "bs_" +bs_settings(jdx).type + num2str(bs_settings(jdx).quant);
+end
+for idx = 1:length(quant2test)
+    jdx = idx+3*length(quant2test);
+    bs_settings(jdx).type = 'daily';
+    bs_settings(jdx).bias = false;
+    bs_settings(jdx).quant = quant2test(idx);
+    bs_settings(jdx).name = UB_B(bs_settings(jdx).bias+1) + "bs_" +bs_settings(jdx).type + num2str(bs_settings(jdx).quant);
+end
+for idx = 1:length(quant2test)
+    jdx = idx+4*length(quant2test);
+    bs_settings(jdx).type = 'annual';
+    bs_settings(jdx).bias = true;
+    bs_settings(jdx).quant = quant2test(idx);
+    bs_settings(jdx).name = UB_B(bs_settings(jdx).bias+1) + "bs_" +bs_settings(jdx).type + num2str(bs_settings(jdx).quant);
+end
+for idx = 1:length(quant2test)
+    jdx = idx+5*length(quant2test);
+    bs_settings(jdx).type = 'quarterly';
+    bs_settings(jdx).bias = true;
+    bs_settings(jdx).quant = quant2test(idx);
+    bs_settings(jdx).name = UB_B(bs_settings(jdx).bias+1) + "bs_" +bs_settings(jdx).type + num2str(bs_settings(jdx).quant);
+end
+for idx = 1:length(quant2test)
+    jdx = idx+6*length(quant2test);
+    bs_settings(jdx).type = 'monthly';
+    bs_settings(jdx).bias = true;
+    bs_settings(jdx).quant = quant2test(idx);
+    bs_settings(jdx).name = UB_B(bs_settings(jdx).bias+1) + "bs_" +bs_settings(jdx).type + num2str(bs_settings(jdx).quant);
+end
+for idx = 1:length(quant2test)
+    jdx = idx+7*length(quant2test);
+    bs_settings(jdx).type = 'daily';
+    bs_settings(jdx).bias = true;
     bs_settings(jdx).quant = quant2test(idx);
     bs_settings(jdx).name = UB_B(bs_settings(jdx).bias+1) + "bs_" +bs_settings(jdx).type + num2str(bs_settings(jdx).quant);
 end
@@ -63,7 +98,7 @@ for aggT = 1:length(aT)
     obs.Properties.VariableNames = "observation";
     
     
-    df = getTimeSeries( signals, aT(aggT), 0, true ); %I'm interested in filling
+    df = getTimeSeries( signals, aT(aggT), 0, false );
     
     matchedData = synchronize( obs, df,'intersection' );
     
