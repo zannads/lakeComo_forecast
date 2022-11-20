@@ -5,7 +5,7 @@ benchmark = [averageForecast, cicloForecast.prob2det( 'average' ), conForecast];
 
 % det
 signalsnames = [detForecast.name, cat(2, benchmark.name )];
-scoresnames = {'kge', 'r', 'alpha', 'beta', 'kge_mod', 'gamma', 'nse', 've'};
+scoresnames = {'kge', 'r', 'alpha', 'beta', 'kge_mod', 'gamma', 'nse', 've', 'mae'};
 PROGEADetScores = table('Size', [length(scoresnames), length(signalsnames)], ...
     'VariableTypes', repmat("cell", 1, length(signalsnames) ),...
     'VariableNames', signalsnames, 'RowNames', scoresnames, ...
@@ -52,6 +52,9 @@ for aggT = 1:length(aT)
             
             PROGEADetScores{"ve", signalsnames(ref)}{1}(aggT, sT) = ...
                 VE( matchedData(:, signalsnames(ref)), matchedData(:, "observation") );
+            
+            PROGEADetScores{"mae", signalsnames(ref)}{1}(aggT, sT) = ...
+                MAE( matchedData(:, signalsnames(ref)), matchedData(:, "observation") );
         end
     end
 end

@@ -212,4 +212,4 @@ end
 %%
 clear aggT aT bf df for_e idx jdx k matchedData obs obs_e oNan p pos pos_
 clear ref scoresnames signals signalsnames sT lT stg sTmax w
-clear efrfDetForecast
+clear efrfDetForecast lTmax bnd ans

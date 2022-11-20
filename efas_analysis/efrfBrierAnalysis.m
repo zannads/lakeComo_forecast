@@ -1,7 +1,6 @@
 %% efrf
 aT = std_aggregation( efrfForecast(1).valid_agg_time( std_aggregation ) );
-% remove what I'm not interested into??
-%lTmax = 0;
+lTmax = efrfForecast(1).max_leadTime( aT );
 
 benchmark = [averageForecast, cicloForecast.prob2det( 'average' ), conForecast];
 
@@ -76,7 +75,7 @@ efrfBrierScores = table('Size', [length(scoresnames), length(signalsnames)], ...
 
 for idx = 1:length( scoresnames )
     for jdx = 1:length(signalsnames)
-        efrfBrierScores{idx,jdx}{1} = repmat( brier_score.empty, length(aT), 1);
+        efrfBrierScores{idx,jdx}{1} = repmat( brier_score.empty, length(aT), max(lTmax));
     end
 end
 efrfBrierScores = addprop(efrfBrierScores, 'agg_times', 'table');
