@@ -1,4 +1,4 @@
-function [outputArg1, outputArg2] = draw_my_metrics( sols )
+function draw_my_metrics( sols, ax )
     %DRAW_MY_METRICS Summary of this function goes here
     %   Detailed explanation goes here
    
@@ -15,40 +15,34 @@ function [outputArg1, outputArg2] = draw_my_metrics( sols )
         davg(idx) = sols(idx).metrics.Davg;
     end
     
-    outputArg1 = figure;
-    t = tiledlayout( 1, 3) ;
-    b = nexttile;
-    bar( 1, Hv );
-    hold on;
-    for idx = 1:nS
-        plot([-0.05*(nS+3)+1,1+0.05*(nS+3)],[Hv(idx),Hv(idx)], 'LineStyle', '--', 'LineWidth', 2);  % I add 1 for POP, plus 2 for the sides
+    if nargin == 1
+        figure;
+        t = tiledlayout( 1, 3) ;
+        ax(1)  = nexttile;
+        ax(2) = nexttile;
+        ax(3) = nexttile;
     end
-    xticklabels(b, {''} );
-    title( b, 'HV' );
+    
+    hold(ax, 'on');
+    for idx = 1:(nS+1)
+        bar(ax(1), idx, Hv(idx) );
+    end
+    xticklabels(ax(1), {''} );
+    title( ax(1), 'HV' );
     % arrow to insert b.Position
     
-    b = nexttile;
-    bar( 1, dmin );
-    hold on;
-    for idx = 1:nS
-        plot([-0.05*(nS+3)+1,1+0.05*(nS+3)],[dmin(idx),dmin(idx)], 'LineStyle', '--', 'LineWidth', 2);  % I add 1 for POP, plus 2 for the sides
+    for idx = 1:(nS+1)
+        bar(ax(2), idx, dmin(idx) );
     end
-    xticklabels(b, {''} );
-    set(b, 'YDir','reverse')
-    title( b, 'Dmin' );
-    outputArg2 = legend(b);
-    outputArg2.Location = 'southoutside';
-    %outputArg2.Orientation = 'horizontal';
+    xticklabels(ax(2), {''} );
+    set(ax(2), 'YDir','reverse')
+    title(ax(2), 'Dmin' );
     
-    b = nexttile;
-    bar( 1, davg );
-    hold on;
-    for idx = 1:nS
-        plot([-0.05*(nS+3)+1,1+0.05*(nS+3)],[davg(idx),davg(idx)], 'LineStyle', '--', 'LineWidth', 2);  % I add 1 for POP, plus 2 for the sides
+    for idx = 1:(nS+1)
+        bar(ax(3), idx, davg(idx) );
     end
-    xticklabels(b, {''} );
-    set(b, 'YDir','reverse')
-    title( b, 'Davg' );
-    
+    xticklabels(ax(3), {''} );
+    set(ax(3), 'YDir','reverse')
+    title(ax(3), 'Davg' );
 end
 
