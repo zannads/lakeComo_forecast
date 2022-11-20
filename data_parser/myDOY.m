@@ -4,7 +4,7 @@ function doy = myDOY( t )
 %'dayofyear' ) is the handling of the leap year.
 % In this case the leap day is still numbered as 59, like the 28th of
 % february. Thus, doy will allways be included between 1 and 365
-
+t = t(:);
 % input check is done inside the function day
 doy = day( t, 'dayofyear' );
 

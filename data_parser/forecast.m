@@ -193,7 +193,7 @@ classdef forecast
             gap_time = obj.time(2:end)-obj.time(1:end-1);
             gap_time = min(max( days(gap_time) )-1, obj.leadTime);
             
-            outputArg = max(min( obj.leadTime-gap_time-agg_times, 15 ), 0);
+            outputArg = max( obj.leadTime-gap_time-agg_times, 0);
         end
         
         function outputArg = prob2det( obj, method )

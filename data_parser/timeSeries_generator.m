@@ -11,7 +11,10 @@ redo_qtD            = false;
 redo_pI             = false;
 redo_pIAnomaly      = false;
 redo_det            = false;
-redo_allefrf        = true;
+redo_allefrf        = false;
+redo_allBS          = false;
+redo_allpI          = false;
+redo_allNorm        = true;
 
 qt2gen = 0.1:0.1:0.9;
 %%
@@ -381,32 +384,148 @@ if redo_det
     end
 end
 %%
-sign2w = zeros(7305,42);
-fid = fopen( "LakeComo_efrf_all_anom.txt", 'w');
-for idx = 3 % location iter
-    for aT_ = 1:42 %agg time iter
-        ts = efrfForecast(idx).getTimeSeries( aT_, 0, true);
+if redo_allefrf
+    sign2w = zeros(7305,42);
+    fid = fopen( "LakeComo_efrf_all_anom.txt", 'w');
+    for idx = 3 % location iter
+        for aT_ = 1:42 %agg time iter
+            ts = efrfForecast(idx).getTimeSeries( aT_, 0, true);
+            ts = array2timetable( mean( ts.Variables, 2), 'RowTimes', ts.Time );
+            
+            %get one realization(365 d) of ciclostationary mean of release
+            csShort = ciclostationary( ts );
+            %get ciclo per time
+            cs = cicloseriesGenerator( csShort, ts.Time );
+            
+            %add_day = [mean(tsShort{tsShort.Time.Day==1 & tsShort.Time.Month==1 , :},1);
+            % mean(tsShort{tsShort.Time.Day==2 & tsShort.Time.Month==1 , :},1)];
+            
+            %ts = [array2timetable(add_day, 'RowTimes', datetime(1999,1,1):datetime(1999,1,2), 'VariableNames', tsShort.Properties.VariableNames);
+            %   tsShort];
+            %extract ciclo
+            %tsMean = array2timetable( mean( ts.Variables, 2), 'RowTimes', ts.Time );
+            
+            sign2w(3:end, aT_) = ts.Variables-cs.(1);
+        end
+    end
+    fprintf( fid, '%d\n', sign2w(:) ); % I save above
+    fclose(fid);
+end
+
+%%
+if redo_allBS
+    PROGForecast = forecast( SynPROGEAForecast.time, SynPROGEAForecast.data(:,:,19) );
+    sign2w = zeros(7305,183);
+    fid = fopen( "candidate_variables/LakeComo_BestSkill_all_anom.txt", 'w' );
+    idx = 3; % location iter
+    for aT_ = 1:183 %agg time iter
+        
+        if aT_ < 4
+            %PROGEA
+            ts = PROGForecast.getTimeSeries( aT_, 0, true );
+            ts = ts(1:7305,:);
+        elseif aT_ < 43
+            % efrf
+            ts = efrfForecast(idx).getTimeSeries( aT_, 0, true);
+        else
+            % efsr
+            ts = efsrForecast(idx).getTimeSeries( aT_, 0, true);
+            ts = ts(1:7305,:);
+        end
+        
         ts = array2timetable( mean( ts.Variables, 2), 'RowTimes', ts.Time );
         
         %get one realization(365 d) of ciclostationary mean of release
-        csShort = ciclostationary( ts ); 
+        csShort = ciclostationary( ts );
         %get ciclo per time
         cs = cicloseriesGenerator( csShort, ts.Time );
         
-        %add_day = [mean(tsShort{tsShort.Time.Day==1 & tsShort.Time.Month==1 , :},1);
-           % mean(tsShort{tsShort.Time.Day==2 & tsShort.Time.Month==1 , :},1)];
-        
-        %ts = [array2timetable(add_day, 'RowTimes', datetime(1999,1,1):datetime(1999,1,2), 'VariableNames', tsShort.Properties.VariableNames);
-         %   tsShort];
-        %extract ciclo
-        %tsMean = array2timetable( mean( ts.Variables, 2), 'RowTimes', ts.Time );
-            
-        sign2w(3:end, aT_) = ts.Variables-cs.(1);
+        if aT_ >=4 & aT_ <= 42
+            sign2w(3:end, aT_) = ts.Variables-cs.(1);
+        else
+            sign2w(:, aT_) = ts.Variables-cs.(1);
+        end
     end
+    
+    fprintf( fid, '%d\n', sign2w(:) ); % I save above
+    fclose(fid);
 end
-fprintf( fid, '%d\n', sign2w(:) ); % I save above
-fclose(fid);
+
+%%
+if redo_allpI
+    sign2w = zeros(7305,183);
+    fid = fopen( "candidate_variables/pI_all_anom.txt", 'w' );
+    for aT_ = 1:183 %agg time iter
         
+        ts = aggregate_historical( qAgg.Time, qAgg.agg_1d, aT_);
+        ts = array2timetable( ts(1:7305,:), 'RowTimes', qAgg.Time(1:7305) );
+        
+        %get one realization(365 d) of ciclostationary mean of release
+        csShort = ciclostationary( ts );
+        %get ciclo per time
+        cs = cicloseriesGenerator( csShort, ts.Time );
+        
+        sign2w(:, aT_) = ts.Variables-cs.(1);
+        
+    end
+    
+    fprintf( fid, '%d\n', sign2w(:) ); % I save above
+    fclose(fid);
+end
+
+%%
+if redo_allNorm
+    PROGForecast = forecast( SynPROGEAForecast.time, SynPROGEAForecast.data(:,:,19) );
+    sign2w = zeros(7305,3);
+    fid = fopen( "candidate_variables/LakeComo_PROGEA_all_Norm.txt", 'w' );
+    for aT_ = 1:3 %agg time iter
+        %PROGEA
+        ts = PROGForecast.getTimeSeries( aT_, 0, true );
+        ts = ts(1:7305,:);
+        sign2w(:, aT_) = ts.Variables;
+    end
+    ms2w = min( sign2w, [], 1);
+    Ms2w = max( sign2w, [], 1);
+    sign2w = (sign2w-ms2w)./(Ms2w-ms2w);
+    
+    fprintf( fid, '%d\n', sign2w(:) ); % I save above
+    fclose(fid);
+    
+    sign2w = zeros(7305,42);
+    fid = fopen( "candidate_variables/LakeComo_efrf_all_Norm.txt", 'w' );
+    idx = 3; % location iter
+    for aT_ = 1:42 %agg time iter
+        %efrf
+        ts = efrfForecast(idx).getTimeSeries( aT_, 0, true);
+        %get one realization(365 d) of ciclostationary mean of release
+        csShort = ciclostationary( ts );
+        sign2w(1, aT_) = csShort{csShort.Time.Month==1 & csShort.Time.Day==1 , 1};
+        sign2w(2, aT_) = csShort{csShort.Time.Month==1 & csShort.Time.Day==2 , 1};
+        % efrf starts from 3 jan 1999
+        sign2w(3:end, aT_) = mean(ts.Variables,2);
+    end
+    ms2w = min( sign2w, [], 1);
+    Ms2w = max( sign2w, [], 1);
+    sign2w = (sign2w-ms2w)./(Ms2w-ms2w);
+    
+    fprintf( fid, '%d\n', sign2w(:) ); % I save above
+    fclose(fid);
+    
+    sign2w = zeros(7305,183);
+    fid = fopen( "candidate_variables/LakeComo_efsr_all_Norm.txt", 'w' );
+%    idx = 3; % location iter
+    for aT_ = 1:183 %agg time iter
+        %efrf
+        ts = efsrForecast(idx).getTimeSeries( aT_, 0, true);
+        sign2w(:, aT_) = mean(ts{1:7305,:},2);
+    end
+    ms2w = min( sign2w, [], 1);
+    Ms2w = max( sign2w, [], 1);
+    sign2w = (sign2w-ms2w)./(Ms2w-ms2w);
+    
+    fprintf( fid, '%d\n', sign2w(:) ); % I save above
+    fclose(fid);
+end
 
 %%
 clear add_day aT aT_ fid idx qt qt2gen redo_maxmin redo_mean redo_meanAnomaly redo_qtA mm
