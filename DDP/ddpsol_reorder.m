@@ -1,9 +1,22 @@
-% ddp_sol_format
+% ddp_sol_format generates an array of struct ddpsol with the following
+% field, each element in the array corresponds to a weighted solution of
+% the ddp problem:
+%       J           horizontal array with cost function result.
+%       weight      horizontal array with the weights.
+%       flag_vr     value that tells if the solution breaks the speed
+%                   operation constraint for the bulkheads of Lake Como.
+%       flag_ref    value that indicates if the solution is in the
+%                   reference set and eventually its index.
+%       sim_h       vertical array with the whole simulation period: level.
+%       sim_r       vertical array with the whole simulation period: release.
 
-% check no solution gives the same point in the sol space
-% [JJJ_unique, ~, ic] = unique( JJJ', 'rows', 'stable');
-% if any(~(ic==(1:length(JJJ))'))
-%     JJJ == 
+%input to the file: 
+%       JJJ [N_obj x n_j]       matrix with the cost for all the
+%                               optimizations. 
+%       weights [n_j x N_obj]   matrix with the weights forall the
+%                               optimizations.
+%       sim_r(h) [n_t x n_j]    matrxi with the trajectory of
+%                               release(level) of all the optimizations.
 
 ddpsol(size(weights,1)) = struct('J', [], 'weight', [], 'flag_vr', [], 'flag_ref', [], ...
     'sim_r', [], 'sim_h', []);
