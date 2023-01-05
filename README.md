@@ -47,3 +47,15 @@ The folder contains the script to compute the Perfect Operating Policy (POP, [Gi
 
 ## 3. Input Variable Selection *ivs* folder
 In this folder you find the scripts to run the IVS on the processed data. You can find the main algorithms and everything [here](https://github.com/zannads/MATLAB_IterativeInputSelection_with_Rtree-c.git).
+
+## 4. Evolutionary Multi-Objective Direct Policy Search *dps_support*
+The code to run the optimization is not available here. 
+However in the folder you can find some functions to upload the result in a struct *matlabize_solution*, extract the parameters of the control law given the point in the pareto front *extract_params*. 
+
+## A1 Plots *draws* folder 
+All the scripts to generate the plots are here. 
+
+## A2 Lake Como model 
+The classes and functions of the model of Lake Como that is implemented in c++ when running the optimization, but in MATLAB to run simple simulations. 
+- *model_lakecomo*:			  original class, the control policy is parametrized only by a combination of RBF.
+- *model_lakecomoAutoselect*: new class, other than the classic combination of RBF the algorithm selects more parameters from the input as well. 
