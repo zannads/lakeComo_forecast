@@ -1,3 +1,8 @@
+%% timeSeries_generator
+% This script was used to generate the .txt files with the forecasted
+% inflow to the lake. 
+% TODO: the code should be removed and generalized in the class forecast 
+
 aT = std_aggregation(efrfForecast(1).valid_agg_time( std_aggregation ));
 
 %#ok<*UNRCH>

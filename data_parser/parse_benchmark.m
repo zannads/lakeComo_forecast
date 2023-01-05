@@ -1,6 +1,10 @@
-% parse_benchmark
+%% parse_benchmark
+% Create the forecast and timetable object starting from the raw data in
+% the txt file
 clear historical averageForecast cicloForecast conForecast
-%%
+%% file with historical data of level, release and inflow
+% inflow is obtained inverting the mass balance equation and it is the
+% inflow in the next 24 h
 
 fid = fopen( fullfile( raw_data_root, 'utils', 'Lake_Como_Data_1946_2019.txt' ) );
 tline = string.empty;

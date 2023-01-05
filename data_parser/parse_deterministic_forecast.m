@@ -1,7 +1,16 @@
-%LOAD_DETERMINISTIC_FORECAST
+%% parse_deterministic_forecast
+% Create the forecast object starting from the raw data in xlsx
+% The data must be in the following path:
+%   raw_data_root/type/forecast_...
+% where type = PROGEA and forecast_.. name of the file
+
+%% load data from Manzoni thesis (deprecated) 
+% Few information are available about the production of this data, moreover
+% the technique used to fill in the data (cyclostationary
+% mean) is not advisable, consistency should be preferred at such short
+% lead times.
 clear detForecast 
-%Using the import tool, data is saved as
-% deterministic_forecast 
+
 deterministic_forecast  = readtable( fullfile( raw_data_root, 'PROGEA', 'forecast_progea_postProcManzoni.xlsx' ) );
 deterministic_forecast = renamevars( deterministic_forecast, ...
     deterministic_forecast.Properties.VariableNames, ...
@@ -9,7 +18,7 @@ deterministic_forecast = renamevars( deterministic_forecast, ...
 
 % Data is a table with the following columns in m^3/s:
 %   1. historical: historical inflow (at 8 am, average of the 24 hours
-% before, in Fuentes???)
+% before)
 %   2. lead1: determinstic prevision, lead time 24 
 %   3. lead2: determinstic prevision, lead time 48
 %   4. lead3: determinstic prevision, lead time 72 ( made by a prevision on 12
@@ -32,7 +41,9 @@ detForecast.description = "PROGEA forecast with 24h time step, reconstructed usi
 
 clear deterministic_forecast first_day time data
 
-%% 
+%% load data from AF 
+% This are the same forecast as above, but when data are missing they are
+% filled with consistency.
 clear detForecast
 deterministic_forecast  = readtable( fullfile( raw_data_root, 'PROGEA', 'Fcst_Aggr_d_PROGEA_P_20140530_20220131_8h_FS_AF.csv' ) );
 deterministic_forecast = renamevars( deterministic_forecast, ...
@@ -48,7 +59,7 @@ deterministic_forecast = renamevars( deterministic_forecast, ...
 %   only hour)
 
 %to match with efas I simply remove the 8 hour shift (even If I should
-%aggregate with a different time step )
+%aggregate with a different time step from the original data)
 deterministic_forecast.Time = deterministic_forecast.Time - hours(8);
 deterministic_forecast = table2timetable( deterministic_forecast );
 
@@ -59,7 +70,10 @@ PROGEAForecast.description = "PROGEA forecast with 24h time step, reconstructed 
 
 clear deterministic_forecast 
 
-%% load synthetic det forecast
+%% load synthetic det forecast by A F
+% These data where produced to extend the period of the PROGEA forecasts.
+% Each file is a table with time (first dim) and n ensemble members
+    % (second dim) for a different lead time (1-2-3)
 data = [];
 for idx = 1:3
     deterministic_forecast  = readtable( fullfile( raw_data_root, 'PROGEA', 'synthetic_forecasts', ['Syn_Fcst_PROGEA_P_1999-01-01_2022-01-31_8h_Ens_51_LeadTime_', int2str(idx), 'd.csv'] ) );

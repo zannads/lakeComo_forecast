@@ -5,8 +5,20 @@ classdef forecast
     properties
         data;       % N-D double array.
         time;       % Array of datetime objects.
-        leadTime;   % Maximum leadTime available.
+        leadTime;   % Maximum leadTime available. 
+        % When:
+        % 'numeric': finite lead time
+        % inf:       the same value is used for all lead times (e.g.
+        % consistency)
+        % nan:       the forecast is perfectly known (e.g. cyclostationary)
         ensembleN;  % Number of the ensembles.
+        % When: 
+        % 'numeric': finite number of ensemble (1 is deterministic, >1
+        % probabilistic
+        % inf:       two values are available, mean and variance (only
+        % gaussian)
+
+        % Just descriptive info
         location;   % Where this forecast has been issued.
         benchmark;  % logical value to be set if forecast is generated from historical data.
         name;       % name assigned to the forecast;
@@ -16,7 +28,7 @@ classdef forecast
     methods
         function obj = forecast( time, data, varargin)
             %FORECAST Construct an instance of this class
-            %   f = forecast( data, timearray ) construct an istance of
+            %   f = forecast( time, data ) construct an istance of
             %   this class. It is necessary that the time array is as loing
             %   as the first dimension of the data array.
             if nargin == 0
