@@ -44,6 +44,10 @@ classdef ncRBF < param_function
             end
             
         end
+
+        function outputArg = getNumParams(obj)
+            outputArg = obj.N*(2*obj.M+obj.K) + obj.K; 
+        end
         
         function y = get_output(obj, input)
             

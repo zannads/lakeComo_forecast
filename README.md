@@ -1,10 +1,10 @@
 # lakeComo_forecast
  
-This project includes all the code developed during the production of my Master thesis (Zanutto, 2022)[http://hdl.handle.net/10589/190646].
+This project includes all the code developed during the production of my Master thesis [Zanutto, 2022](http://hdl.handle.net/10589/190646).
 
 The goal of the thesis was to investigate the possibility to use operational hydrological forecasts and train a control policy for the release of a water reservoir, the Lake Como in Italy, that was directly informed by the forecasts.
 
-The forecasts are: (i) the probabilistic open source EFAS (reforecast)[https://cds.climate.copernicus.eu/cdsapp#!/dataset/efas-reforecast?tab=overview] and (ii) (seasonal reforecast)[https://cds.climate.copernicus.eu/cdsapp#!/dataset/efas-seasonal-reforecast?tab=overview], (iii) a short-term deterministic inflow forecast to the lake produced by a local company (these data are protected). 
+The forecasts are: (i) the probabilistic open source EFAS [reforecast](https://cds.climate.copernicus.eu/cdsapp#!/dataset/efas-reforecast?tab=overview) and (ii) [seasonal reforecast](https://cds.climate.copernicus.eu/cdsapp#!/dataset/efas-seasonal-reforecast?tab=overview), (iii) a short-term deterministic inflow forecast to the lake produced by a local company (these data are protected). 
 
 The historical level and outflow measurements used are not publicy available as well.
 
@@ -14,7 +14,7 @@ In the ***data_parser*** folder, you can find all the classes, functions and scr
 In particular I decided to use all time series parsed into a *Timetable* MATLAB Object. 
 The forecasts where similar, but not equal, hence I created a class (hydrological) *forecast* to handle them. Because of the different definition between the data, the main variable is the *inflow in the **next** 24 hours* ($inf_24$), hence between time $t$ and $t+24$. 
 >[! Note]
-> This decision of using the future discharge ($inf_24$) was a decision made at the beginning of the development, with not a lot of knowledge of the system and forced by some data I received early in the development, it is not advisable. Following version should use the *inflow in the **past** x hours* ($dis_x$) as EFASes (and any **GOOD** hydrological model) do.   
+> This decision of using the future discharge ($inf_24$) was a decision made at the beginning of the development, with not a lot of knowledge of the system and forced by some data I received early in the development, it is not advisable. Following version should use the *discharge in the **past** x hours* ($dis_x$) as EFASes (and any **GOOD** hydrological model) do.   
 ### Main functions/script/classes
 - *parse_probabilistic_forecast*: creates *forecast* objects for the EFAS forecast starting from the *.NetCDF* raw file.
 - *parse_determinstic_forecast*: creates *forecast* objects for the Det forecast starting from *.xlsx* files. 
@@ -28,7 +28,22 @@ The forecasts where similar, but not equal, hence I created a class (hydrologica
 - *timeSeries_generator* creates *.txt* files for external use. It is just a script to render the production faster, not necessary. 
 - *cicloseriesGenerator*: fits a cyclostationary array in a timearray.
 
-## 1. Forecast Analysis 
-### Determinstic Analysis 
+## 1. Forecast Analysis *stats*, *efas_analysis* folder 
+- The folder *stats* contains the functions to calculate various scores on the forecasts. 
+- The folder *efas_analyis* contains the script to use the functions in a automated way and saving all the results in MATLAB *Table* objects. I don't suggest look at them. 
 
-### Probabilistic Analysis
+## 2. Perfect Operating Policy *ddp* folder
+The folder contains the script to compute the Perfect Operating Policy (POP, [Giuliani et. al, 2015](https://onlinelibrary.wiley.com/doi/abs/10.1002/2015WR017044)), i.e. the policy assuming perfect knowledge of the future. 
+### Main scripts 
+- Run 1st *lakeComo_ddp_99_18_new_setup* to set up the workspace.
+- Run 2nd *lakeComo_ddp_gen_no_vr* to compute the solutions.
+>[! Note]
+> This script doesn't have the constraint on the speed release, it is checked a posteriori with the function *speed_constraint_check*. 
+> Including the constraint directly in the simulation would have meant increasing the dimensionality of the state space, hence, of the computational time. 
+- optional *ddpsol_reoder* to reoder in a struct the solutions.
+
+### Additional scripts
+- *lakeComo_ddp_denaro_setup* substitutes *lakeComo_ddp_99_18_new_setup* in setting up the workspace, it is intended to try and replicate the result of [Denaro et. al, 2017](https://linkinghub.elsevier.com/retrieve/pii/S0309170816304651).
+
+## 3. Input Variable Selection *ivs* folder
+In this folder you find the scripts to run the IVS on the processed data. You can find the main algorithms and everything [here](https://github.com/zannads/MATLAB_IterativeInputSelection_with_Rtree-c.git).

@@ -17,14 +17,19 @@ classdef model_lakecomo_autoSelect
         Como_catch_param;
         ComoCatchment
         
-        Nex;                % number of exogneous signal to append to the BOP
-        ex_signal;          % matrix with exogenous signals, first dimension time, second == Nex
+        Nex;                % number of exogneous signal
+        ex_signal;          % array of exogenous signals, first dimension time, second NN
+
+        Nfc;                % number of forecasts
+        fc_signal;          % array of forecast objects, first dimension time, second aggregation time
         
         ComoParam;
         LakeComo;
         
         pParam;
         mPolicy;
+
+        ePolicy;        % extened policy part from raw data (ES or FC) to input of mPolicy
         
         % objective function data
         warmup;             % number of days of warmup before obj calculation starts
@@ -107,11 +112,13 @@ classdef model_lakecomo_autoSelect
         end
 
         function [J, h, r] = evaluate(obj, var)
-            obj.mPolicy = obj.mPolicy.setParameters(var);
-            
-            ps = floor(var(end));
+            % classic params for the policy 
+            obj.mPolicy = obj.mPolicy.setParameters(var(1:obj.mPolicy.getNumParams));
+            % other params for the extended policy coming from outside
+            obj.ePolicy.missing = var( (1+obj.mPolicy.getNumParams):end );
+
             if obj.Nsim < 2
-                [J, h, r] = obj.simulate(ps);
+                [J, h, r] = obj.simulate(1); % 0 in c++ means 1 in MATLAB
             else
                 % MC simulation
             end
@@ -120,26 +127,18 @@ classdef model_lakecomo_autoSelect
             % automatically deleted as you don't return obj
         end
         
-        function J = evaluateFromFile(obj, policyfile)
+        function [J, h, r] = evaluateFromFile(obj, policyfile)
             var = load( policyfile, '-ascii' );
-            obj.mPolicy = obj.mPolicy.setParameters(var);
             
-            aT = floor(var(end));
-            if obj.Nsim < 2
-                J = obj.simulate(1, aT); % 0 in c++ means 1 in MATLAB
-            else
-                % MC simulation
-            end
-            
-            %obj.mPolicy = obj.mPolicy.clearParameters;
+            [J, h, r] = evaluate(obj, var);
         end
     end
     
     methods( Access = protected )
         
         
-        % function to perform the simulation over the scenario ps and aggT aT
-        function [J, h, r] = simulate(obj, ps, aT)
+        % function to perform the simulation over the scenario ps
+        function [J, h, r] = simulate(obj, ps )
             
             s = nan( obj.H+1, 1);
             h = nan( obj.H+1, 1);
@@ -149,7 +148,7 @@ classdef model_lakecomo_autoSelect
             
             h_p = 0;
             
-            input = nan(1, obj.Nex+3);
+            input = nan(1, obj.mPolicy.getInputNumber());
             
             J = nan( obj.getNobj, 1);
             
@@ -177,8 +176,30 @@ classdef model_lakecomo_autoSelect
                 input(1) = sin( 2*pi*doy(t)/obj.T );
                 input(2) = cos( 2*pi*doy(t)/obj.T );
                 input(3) = h(t);
-                for idx = 1:obj.Nex
-                    input(1, 3+idx) =obj.ex_signal(t, idx, aT+1); % aT comes from c++ where I start from 0
+                as_idx = 1;
+                for idx = 4:obj.mPolicy.getInputNumber()
+                    if obj.ePolicy.map{idx}(1) == 1
+                        es_idx = obj.ePolicy.map{idx}(2);
+                        if es_idx== 0
+                            es_idx = floor(obj.ePolicy.missing(as_idx))+1;
+                            as_idx = as_idx +1;
+                        end
+                        input(1, idx) =obj.ex_signal(es_idx).get(t, ps); % aT comes from c++ where I start from 0
+                    else 
+                        % equal to 2
+                        fc_idx = obj.ePolicy.map{idx}(2);
+                        if fc_idx== 0
+                            fc_idx = floor(obj.ePolicy.missing(as_idx))+1;
+                            as_idx = as_idx +1;
+                        end
+                        aT = obj.ePolicy.map{idx}(3);
+                        if aT == 0
+                            aTall = cat(1, obj.fc_signal.at_length);
+                            aT = floor( obj.ePolicy.missing(as_idx)*aTall(fc_idx) ) +1;
+                            as_idx = as_idx+1;
+                        end
+                        input(1,idx) = obj.fc_signal(fc_idx).get(t, aT);
+                    end
                 end
                 
                 u(t) = obj.mPolicy.get_NormOutput(input);
@@ -264,6 +285,7 @@ classdef model_lakecomo_autoSelect
             end
             fseek( fid, 0, -1 ); % go back to bof
             
+            % load inflow
             obj.Como_catch_param.CM = searchTagSettings( obj, fid, '<CATCHMENT>' );
             tline = fgetl( fid );
             spline = split( tline );
@@ -276,26 +298,41 @@ classdef model_lakecomo_autoSelect
             obj.Como_catch_param.col = obj.H;
             fseek( fid, 0, -1 ); % go back to bof
             
-            try %since it has been implemented later
-                obj.Nex = searchTagSettings( obj, fid, '<ESIGNALS>' );
-                obj.ex_signal = nan( obj.H, obj.Nex, obj.NN );
-                for idx = 1:obj.Nex
-                    tline = fgetl( fid );
-                    spline = split( tline );
-                    while isempty(spline{1})
-                        spline(1) = [];
-                    end
-                    tempsig = load( fullfile( filedir, spline{1})  , '-ascii');
-                    tempsig = reshape( tempsig(1:obj.H*obj.NN), obj.H, 1, obj.NN );
-                    obj.ex_signal(:,idx,:) = tempsig;
-                    clear tempsig
+            % load exogneous signals 
+            obj.Nex = searchTagSettings( obj, fid, '<ESIGNALS>' );
+            obj.ex_signal = repmat(exogenous_signal(), obj.Nex,1);
+            for idx = 1:obj.Nex
+                tline = fgetl( fid );
+                spline = split( tline );
+                while isempty(spline{1})
+                    spline(1) = [];
                 end
-            catch e
-                obj.Nex = 0;
-                obj.ex_signal = nan( obj.H, obj.Nex );
+                obj.ex_signal(idx) = exogenous_signal(spline{1}, obj.H, obj.NN);
             end
             fseek( fid, 0, -1 ); % go back to bof
-            
+
+            % load forecasts (second dimension aggregation time and not
+            % lead time; while the third dimension, the ensemble, is not
+            % present; to save time in the optimization,)
+            obj.Nfc = searchTagSettings( obj, fid, '<FORECASTS>' );
+            obj.fc_signal = repmat(temp_fc(), obj.Nfc,1);
+            for idx = 1:obj.Nfc
+                tline = fgetl( fid );
+                spline = split( tline );
+                while isempty(spline{1})
+                    spline(1) = [];
+                end
+                fn  = spline{1}; %load filename
+                spline(1) = [];
+                while isempty(spline{1}) %search number of AT
+                    spline(1) = [];
+                end
+                aT = str2double(spline{1});
+                obj.fc_signal(idx) = temp_fc( fn, obj.H, aT);
+                clear fn aT
+            end
+            fseek( fid, 0, -1 ); % go back to bof
+
             obj.ComoParam.initCond = searchTagSettings( obj, fid, '<INIT_CONDITION>' );
             fseek( fid, 0, -1 ); % go back to bof
             
@@ -319,6 +356,22 @@ classdef model_lakecomo_autoSelect
                 spline(1) = [];
                 obj.pParam.MIn(idx) = str2double(spline{1});
                 spline(1) = [];
+                %first 3 are sintime, costime, level 
+                if idx > 3 
+                    if strcmp( spline{1}, 'es')
+                        obj.ePolicy.map{idx} = 1;
+                    elseif strcmp( spline{1}, 'fc')
+                        obj.ePolicy.map{idx} = 2;
+                    else
+                        error( 'wrong type');
+                    end
+                    spline(1) = [];
+
+                    while ~isempty(spline) && ~isempty( spline{1} )
+                        obj.ePolicy.map{idx}(end+1) = str2double( spline(1) );
+                        spline(1) = [];
+                    end
+                end
             end
             fseek( fid, 0, -1 ); % go back to bof
             
@@ -343,7 +396,7 @@ classdef model_lakecomo_autoSelect
         end
         
         function value = searchTagSettings(~, fid, tag )
-            tline = 'a b c';
+            tline = 'a b c'; %fake first line to enter the while
             spline = split( tline );
             while ~strcmp( spline{1}, tag )
                 tline = fgetl( fid );

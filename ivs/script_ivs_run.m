@@ -2,19 +2,14 @@
 % MATLAB_IterativeInputSelection_with_RTree-c, developed by Stefano Galelli
 % and Riccardo Taormina
 %
-% Prof. Galelli is Assistant Professor, Singapore University of Technology
-% and Design stefano_galelli@sutd.edu.sg
-% http://people.sutd.edu.sg/~stefano_galelli/index.html
-%
-% Riccardo Taormina is a Ph.D. candidate at the Hong Kong Polytechnic
-% University riccardo.taormina@connect.polyu.hk
-% 
 % For the script to work, the MATLAB_IterativeInputSelection_with_RTree-c
 % must have been downloaded and added to MATLAB path, moreover the
 % regression tree package source code must have been compiled, and the
 % resulting mex files copied to the main directory. This directory must
 % then be added to the MATLAB PATH. Refer to INSTALL.txt for further
 % information on the steps to follow.
+% Moreover, the downloaded MATLAB package should be my modified version.
+% Available at https://github.com/zannads/MATLAB_IterativeInputSelection_with_Rtree-c.git
 
 %% Set workspace
 %clear
@@ -22,7 +17,7 @@
 setup_params
 
 %% Load and prepare data
-%ddp_solution = 86;
+ddp_solution = 86;
 Res = false; %work on residual of BOP or not
 
 % I use my own function to produce the data to use in the script so as to
@@ -47,7 +42,7 @@ c_v = [c_v; 'storage_t'; 'd_t']; % add the other candidate variables name;
 %% Set the parameters for the Extra-Trees and the IIS
 % extra tree
 rpar.M    = 500; % number of extra trees in the forest
-rpar.nmin = 15;   % number of points per leaf
+%rpar.nmin = 15;   % number of points per leaf
 rpar.k    = size(data, 2)-1;  % Number of random cuts -> number of candidate variables
 
 % IIS
@@ -82,8 +77,8 @@ end
 % Plot the results
 [X, R2, R2_res] = summarize_IIS_result(results_iis_n);
 print_names(c_v, X)
-print_R2( R2, X, c_v )
-draw_colorMap( X, R2 )
+%print_R2( R2, X, c_v )
+%draw_colorMap( X, R2 )
 
 %% saving 
 

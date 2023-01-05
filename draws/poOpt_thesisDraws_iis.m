@@ -61,14 +61,14 @@ flag = 1; % if flag == 1, an ensemble is built on the whole dataset at the end o
 
 % Shuffle the data
 data_sh = shuffle_data(data(:,end-2:end));
-
+%%
 % Run the cross-validation
 [model] = crossvalidation_extra_tree_ensemble(data_sh,rpar.M,rpar.k,rpar.nmin,rpar.ns,flag);
 
 % Model performance in calibration and validation
 model.cross_validation.performance.Rt2_cal_pred_mean  % 
 model.cross_validation.performance.Rt2_val_pred_mean  % 
-
+%%
 % Graphical analysis
 cal_et = figure;
 tiledlayout(2,1);

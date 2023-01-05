@@ -25,7 +25,7 @@ if nargin>2
 end
 
 % check they are the same lenght and the correct type.
-if ~istimetable(s) | ~istimetable(o)
+if ~istimetable(s) || ~istimetable(o)
     error( 'TimeSeries:wrongInput', ...
         'Error. \nThe input must be a Time Series object.' );
 end
