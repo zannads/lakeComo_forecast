@@ -5,8 +5,8 @@ clear historical averageForecast cicloForecast conForecast
 %% file with historical data of level, release and inflow
 % inflow is obtained inverting the mass balance equation and it is the
 % inflow in the next 24 h
-
-fid = fopen( fullfile( raw_data_root, 'utils', 'Lake_Como_Data_1946_2019.txt' ) );
+global data_folder;
+fid = fopen( fullfile( data_folder, 'LakeComoRawData', 'utils', 'Lake_Como_Data_1946_2019.txt' ) );
 tline = string.empty;
 %delete first row as it is only info.
 fgetl(fid);
@@ -50,7 +50,7 @@ cs = ciclostationary( cs ); %get one realization(365 d) of ciclostationary mean 
 
 % get a time series starting from historical. 
 cs = cicloseriesGenerator( cs, time );
-data = cat(3, cs.dis24, cs.var24 );
+data = cat(3, cs.(1), cs.(2) );
 
 cicloForecast = forecast( time, data, ...
     'LeadTime', nan, 'EnsembleNumber', inf, 'Benchmark', true, ...
@@ -78,4 +78,4 @@ for aggT = 1:length(con_step)
 end
 
 %%
-clear aggT con_step cs data h idx n_t names time DT_S
+clear aggT con_step cs data h idx n_t names time DT_S ans

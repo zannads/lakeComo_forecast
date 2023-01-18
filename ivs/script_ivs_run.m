@@ -22,15 +22,15 @@ Res = false; %work on residual of BOP or not
 
 % I use my own function to produce the data to use in the script so as to
 % change the minum amount of code possible.
-c_v = dir( fullfile(raw_data_root, 'candidate_variables_99_18', '*.txt') );
-%c_v = dir( fullfile(raw_data_root, 'perfect_inflows', '*.txt') );
+c_v = dir( fullfile(data_folder, 'candidate_variables_99_18', '*.txt') );
+%c_v = dir( fullfile(data_folder, 'perfect_inflows', '*.txt') );
 c_v = fullfile({c_v.folder}', {c_v.name}'); 
 % continue with standard candidate variables (states)
-storage_file = fullfile( raw_data_root, 'ddp_trajectories_99_18', ['level_sol', int2str(ddp_solution),'_99_18.txt'] );
-doy_file = fullfile( raw_data_root, 'utils', 'doy_99_18_LD.txt' );
+storage_file = fullfile( data_folder, 'Solutions', 'DDP', ['level_sol', int2str(ddp_solution),'_99_18.txt'] );
+doy_file = fullfile( data_folder, 'LakeComoRawData', 'utils', 'doy_99_18_LD.txt' );
 
 %output file
-output_file = fullfile( raw_data_root, 'ddp_trajectories_99_18', ['release_sol', int2str(ddp_solution),'_99_18.txt'] );
+output_file = fullfile( data_folder, 'Solutions', 'DDP', ['release_sol', int2str(ddp_solution),'_99_18.txt'] );
 
 %merge all the files into data matrix 
 data = compact_files( [c_v;storage_file;doy_file;output_file] );
@@ -42,7 +42,7 @@ c_v = [c_v; 'storage_t'; 'd_t']; % add the other candidate variables name;
 %% Set the parameters for the Extra-Trees and the IIS
 % extra tree
 rpar.M    = 500; % number of extra trees in the forest
-%rpar.nmin = 15;   % number of points per leaf
+rpar.nmin = 15;   % number of points per leaf
 rpar.k    = size(data, 2)-1;  % Number of random cuts -> number of candidate variables
 
 % IIS
@@ -93,7 +93,7 @@ if Res
 else
     base = 'ivs_';
 end
-name = fullfile(raw_data_root, 'ivs_solutions', strcat('sol', int2str(ddp_solution)), ...
+name = fullfile(data_folder, 'Solutions', 'IVS', strcat('sol', int2str(ddp_solution)), ...
     strcat(base,code,'_sol',int2str(ddp_solution),'_n', int2str(rpar.nmin), '.mat') );
 % if exist( name, 'file' )
 %     name(end-3:end+2) = '_2.mat';

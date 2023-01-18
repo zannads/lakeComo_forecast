@@ -1,18 +1,30 @@
 %% parse_probabilistic_forecast
 % Create the forecast object starting from the raw data in NetCDF
 % downloaded from EFAS. The data must be in the following path:
-%   raw_data_root/type/locationName/
+%   data_folder/LakeComoRawData/type/locationName/
 % type is either 'efrf' Probabilistic reforecast or 'efsr' Prob Seasonal
 % reforecast locationName was one of the 4 I downloaded, i.e. Fuentes,
 % Samolaco, LakeComo, Olginate
 
+% Important locations from the EFAS Domain
+Fuentes = struct( 'Lon', 9.412760, 'Lat', 46.149950);
+Fuentes.fname = "Fuentes";
+Olginate = struct( 'Lon', 9.41338, 'Lat', 45.8053);
+Olginate.fname = "Olginate";
+LakeComo = struct( 'Lon', 9.38175, 'Lat', 45.853973);
+LakeComo.fname = "LakeComo";
+Mandello = struct( 'Lon', 9.310840, 'Lat', 45.904705); 
+Mandello.fname = "Mandello";
+locations = [Fuentes, Mandello, LakeComo, Olginate];
+clear Fuentes Olginate LakeComo Mandello
+
 % lets start with extended range: efrf
-efrfForecast = upload('efrf', locations );
+efrfForecast = uploadEFAS('efrf', locations );
 
 % now its time for seasonal: efsr
-efsrForecast = upload( 'efsr', locations );
+efsrForecast = uploadEFAS( 'efsr', locations );
 
-function obj = upload( type, location)
+function obj = uploadEFAS( type, location)
 %UPLOAD uploads from the folder the EFAS forecast of one of the
 %two types: efrf or efsr.
 
@@ -21,14 +33,14 @@ dis = 'dis24';
 % Both the forecasts are both dis24 because the EFAS efrf that are
 % originally in dis06 where preprocessed when downloading.
 % Also the EFAS efsr are reduced to the same number of ensemble members.
-global raw_data_root;
+global data_folder;
 n_l = length( location );
 
 obj(n_l)= forecast; %preallocate
 for loc = 1:n_l
     % upload
     % get a list of object in the folder and remove all non NetCDF files
-    list_element = dir( fullfile( raw_data_root, type, location(loc).fname , '*.nc') );
+    list_element = dir( fullfile( data_folder, 'LakeComoRawData', type, location(loc).fname , '*.nc') );
     n_t = length( list_element );
     
     % get the number of ensambles.

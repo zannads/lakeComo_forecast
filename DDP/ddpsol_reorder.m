@@ -31,20 +31,21 @@ for idx = 1:length(ddpsol)
 end
 clear JJJ weights sim_r sim_h
 %% save to a file JJJ
-fid = fopen( fullfile( raw_data_root, 'ddp_trajectories_99_18', 'ddpComo.txt'), 'w' );
+fid = fopen( fullfile( data_folder, 'Solutions', 'DDP', 'ddpComo.txt'), 'w' );
 fprintf( fid, '%d %d %d\n', cat(1, ddpsol.J)');
 fclose(fid);
 clear fid
 %% extract reference set to another file
-cmd = ['java -classpath ', fullfile('~/Documents/LakeComo_EMODPS/MOEAFramework/MOEAFramework-1.17-Executable.jar'), ...
+path2MOEA = '~/Documents/LakeComo_EMODPS/MOEAFramework/MOEAFramework-1.17-Executable.jar';
+cmd = ['java -classpath ', path2MOEA, ...
     ' org.moeaframework.util.ReferenceSetMerger -e ', num2str([0.025, 1, 0.0025], '%d,%d,%d'),...
     ' -o ', fullfile( raw_data_root, 'ddp_trajectories_99_18', 'ddpComo.reference'), ' ', ...
-    fullfile( raw_data_root, 'ddp_trajectories_99_18', 'ddpComo.txt') ];
+    fullfile( data_folder, 'Solutions', 'DDP', 'ddpComo.txt') ];
 
 system( cmd );
 clear cmd
 %% reload the file of the reference
-ddpComoRef = load( fullfile( raw_data_root, 'ddp_trajectories_99_18', 'ddpComo.reference'), '-ascii' );
+ddpComoRef = load( fullfile( data_folder, 'Solutions', 'DDP', 'ddpComo.reference'), '-ascii' );
 %ddpComoRef(ddpComoRef(:,1)>4.45, :) = [];
 %% set the reference flag by comparing reference file and JJJ
 for idx = 1:size(ddpComoRef, 1)

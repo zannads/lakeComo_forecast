@@ -56,7 +56,11 @@ hold(fullSim.rel, 'on');
 for jdx = 1:length(sols)
     EMODPSol = sols(jdx);
     solnumber = getN(EMODPSol.reference);
-    mdc = model_lakecomo( EMODPSol.settings_file );
+    if solMD(jdx)
+        mdc = model_lakecomo_autoSelect( EMODPSol.settings_file );
+    else
+        mdc = model_lakecomo( EMODPSol.settings_file );
+    end
     [J, h, r] = mdc.evaluate( extract_params( EMODPSol, solnumber ) );
     %
     ls = solsLS(jdx);
@@ -101,7 +105,7 @@ end
 end_idx = length(h);
 plot(fullSim.rel, st_idx:end_idx, 22+aggregateddemand(timeD(st_idx:end_idx)), 'LineWidth', thiD(timeM(st_idx)), 'Color', 'r', 'LineStyle', styD(timeM(st_idx)));
 
-relLeg = legend(fullSim.rel, [{'POP'},solsName,{'','Demand'}] );
+fullSim.leg = legend(fullSim.rel, [{'POP'},solsName,{'','Demand'}] );
 clear st_idx end_idx timeS timeT timeD timeM stYD thiD
 %%
 

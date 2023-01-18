@@ -307,7 +307,7 @@ classdef model_lakecomo_autoSelect
                 while isempty(spline{1})
                     spline(1) = [];
                 end
-                obj.ex_signal(idx) = exogenous_signal(spline{1}, obj.H, obj.NN);
+                obj.ex_signal(idx) = exogenous_signal(fullfile( filedir, spline{1} ), obj.H, obj.NN);
             end
             fseek( fid, 0, -1 ); % go back to bof
 
@@ -322,7 +322,7 @@ classdef model_lakecomo_autoSelect
                 while isempty(spline{1})
                     spline(1) = [];
                 end
-                fn  = spline{1}; %load filename
+                fn  = fullfile( filedir, spline{1} ); %load filename
                 spline(1) = [];
                 while isempty(spline{1}) %search number of AT
                     spline(1) = [];

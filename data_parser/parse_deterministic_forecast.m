@@ -10,8 +10,9 @@
 % mean) is not advisable, consistency should be preferred at such short
 % lead times.
 clear detForecast 
+global data_folder;
 
-deterministic_forecast  = readtable( fullfile( raw_data_root, 'PROGEA', 'forecast_progea_postProcManzoni.xlsx' ) );
+deterministic_forecast  = readtable( fullfile( data_folder, 'LakeComoRawData', 'PROGEA', 'forecast_progea_postProcManzoni.xlsx' ) );
 deterministic_forecast = renamevars( deterministic_forecast, ...
     deterministic_forecast.Properties.VariableNames, ...
     {'historical', 'lead1', 'lead2', 'lead3', 'subs'} );
@@ -45,7 +46,7 @@ clear deterministic_forecast first_day time data
 % This are the same forecast as above, but when data are missing they are
 % filled with consistency.
 clear detForecast
-deterministic_forecast  = readtable( fullfile( raw_data_root, 'PROGEA', 'Fcst_Aggr_d_PROGEA_P_20140530_20220131_8h_FS_AF.csv' ) );
+deterministic_forecast  = readtable( fullfile( data_folder, 'LakeComoRawData', 'PROGEA', 'Fcst_Aggr_d_PROGEA_P_20140530_20220131_8h_FS_AF.csv' ) );
 deterministic_forecast = renamevars( deterministic_forecast, ...
     deterministic_forecast.Properties.VariableNames, ...
     {'Time', 'lead1', 'lead2', 'lead3'} );
@@ -76,7 +77,7 @@ clear deterministic_forecast
     % (second dim) for a different lead time (1-2-3)
 data = [];
 for idx = 1:3
-    deterministic_forecast  = readtable( fullfile( raw_data_root, 'PROGEA', 'synthetic_forecasts', ['Syn_Fcst_PROGEA_P_1999-01-01_2022-01-31_8h_Ens_51_LeadTime_', int2str(idx), 'd.csv'] ) );
+    deterministic_forecast  = readtable( fullfile( data_folder, 'LakeComoRawData', 'PROGEA', 'synthetic_forecasts', ['Syn_Fcst_PROGEA_P_1999-01-01_2022-01-31_8h_Ens_51_LeadTime_', int2str(idx), 'd.csv'] ) );
     deterministic_forecast = table2timetable( deterministic_forecast );
     data = cat(3, data, deterministic_forecast.Variables);
     % concatenate time x ensemble x lead time

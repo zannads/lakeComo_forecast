@@ -39,8 +39,8 @@ rw( doy>= 91 & doy<=283 ) = 0;%squared during summer:     deficit^(2-0)
 % clear rain_weight_99_19_LD;
 
 % demand, s_low -365values
-load( fullfile( raw_data_root, 'utils', 'aggregated_demand.txt' ), '-ascii' );
-load( fullfile( raw_data_root, 'utils', 'static_low.txt' ), '-ascii' );
+load( fullfile( data_folder, 'LakeComoRawData', 'utils', 'aggregated_demand.txt' ), '-ascii' );
+load( fullfile( data_folder, 'LakeComoRawData', 'utils', 'static_low.txt' ), '-ascii' );
 
 
 J = {floodDays( h_flo ), ...
