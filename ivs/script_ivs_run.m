@@ -14,7 +14,7 @@
 %% Set workspace
 %clear
 %clc
-setup_params
+setup_base;
 
 %% Load and prepare data
 ddp_solution = 86;

@@ -90,7 +90,7 @@ ddpsol_reoder;`
 
 #### Output:
 A struct with all the solutions of the ddp. See *ddpsol_reoder* for the info on the struct.
-Save in *Solutions/DDP*
+Save the variable in *Solutions/DDP*
 
 ### Additional scripts
 - *lakeComo_ddp_denaro_setup* substitutes *lakeComo_ddp_99_18_new_setup* in setting up the workspace, it is intended to try and replicate the result of [Denaro et. al, 2017](https://linkinghub.elsevier.com/retrieve/pii/S0309170816304651).
@@ -109,7 +109,7 @@ script_ivs_run`
 
 #### Output:
 The workspace resulting from each run will be saved as *Solutions/IVS/sol#/_ivs_something_sol#_n#.mat*. 
-It's a script and it access the base `workspace`, so it possible, to comment the line where the parameters are defined and define them directly in the command window. 
+It's a script and it access the base `workspace`, so it is possible to comment the line where the parameters are defined and define them directly in the command window. 
 
 ## 4. Evolutionary Multi-Objective Direct Policy Search *dps_support*
 The code to run the optimization is not available here. 
@@ -118,14 +118,14 @@ However in the folder you can find some functions to upload the result in a stru
 #### Pre:
 Solutions are saved in *Solutions/EMODPS* or *Solutions/EMODPS_autoselect* if using the extended policy.
 The structure is always:
-- */data* the files uploaded when creating the object.
-- */output* the output files for each seed and the settings file used to produce them.
+- */data*    the files uploaded when creating the object.
+- */output*  the output files for each seed produce by Borg and the settings file used to produce them.
 - */runtime* the runtime files for each seed produce by Borg.
 
 #### Run:
 use *matlabize_solution* normally.
 
-#### 
+#### Output:
 A struct as explained by *matlabize_solution*.
 
 ## A1 Plots *draws* folder 
@@ -145,5 +145,10 @@ The structure is always:
 
 #### Run:
 is the same with *model_lakeComo* or *model_lakecomoAutoselect*, just change the name of the constructor.
-`sol = matlabize_solution( path );
-`
+`solN = ##;
+sol = matlabize_solution( path );
+mdc = model_lakecomo( sol.settings_file );
+[J, h, r] = mdc.evaluate( extract_params( sol, solN ) );`
+
+#### Ouput: 
+An object of the class *model_lakecomo*, the results of the simulation (objectives J, level h, release r)
