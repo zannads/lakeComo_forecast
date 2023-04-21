@@ -35,7 +35,7 @@ classdef staticLow < objFunction
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
             
-            outputArg = sum( double( h < obj.s_low( doy ) ),  1, 'omitnan');
+            outputArg = obj.evaluate(h,doy);
             outputArg = obj.normalize( outputArg );
         end
     end

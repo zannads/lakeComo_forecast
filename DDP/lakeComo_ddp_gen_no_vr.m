@@ -1,5 +1,5 @@
 %% OPTIMIZATION
-fprintf('optimization\n');
+fprintf('Backward\n');
 
 tic;
 H = nan( n_t+1, n_j, n_s);
@@ -62,10 +62,11 @@ for t = n_t:-1:+1
     % min wrt n_u -> n_j x n_s
     H( t, :, :) = min(Q, [], 3);
 end
+fprintf('\n');
 toc
 
 %% do simulation for the single objectives
-fprintf('simulation\n');
+fprintf('Forward simulation\n');
 s_init = LakeComo.level2storage(historical{ period(1), "h"}, 0);
 
 sim_s = nan( n_t+1, n_j);
@@ -145,5 +146,6 @@ JJJ = [J{1}.evaluate( sim_h(2:end, :) );
     J{2}.evaluate( sim_r, 1:n_t, doy );
     J{3}.evaluate( sim_h(2:end, :), [doy(2:end); myDOY(period(end)+1)] ) ];
 JJJ = diag( [1/yy, 1, 1/yy] )* JJJ; % floodDays and static are defined as day/year
+fprintf('\n');
 toc
 save ddp_sol_99_18.mat discr_h discr_u Gbias Gk Gnorm H J JJJ LakeComo period sim_h sim_r weights

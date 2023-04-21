@@ -84,13 +84,13 @@ classdef model_lakecomo_autoSelect
             obj.q_hp = 150;
             
              %load only 365
-            obj.demand = load( '~/Documents/Data/utils/aggregated_demand.txt', '-ascii' );
-            %obj.low = load( '~/Documents/Data/utils/low_l.txt', '-ascii' );
-            obj.s_low = load( '~/Documents/Data/utils/static_low.txt', '-ascii' );
+            obj.demand = load( '~/Documents/Data/LakeComoRawData/utils/aggregated_demand.txt', '-ascii' );
+            %obj.low = load( '~/Documents/Data/LakeComoRawData/utils/low_l.txt', '-ascii' );
+            obj.s_low = load( '~/Documents/Data/LakeComoRawData/utils/static_low.txt', '-ascii' );
             
             % load H days
-            %obj.hreg = load( '~/Documents/Data/utils/regulator.txt', '-ascii' );
-            %obj.rain_weight = load( '~/Documents/Data/utils/rain_weight_99_19_LD.txt', '-ascii' );
+            %obj.hreg = load( '~/Documents/Data/LakeComoRawData/utils/regulator.txt', '-ascii' );
+            %obj.rain_weight = load( '~/Documents/Data/LakeComoRawData/utils/rain_weight_99_19_LD.txt', '-ascii' );
             
             obj.J = {...
                 floodDays( obj.h_flo ); 

@@ -1,4 +1,3 @@
-fullPeriod = (datetime(1999, 1, 1):datetime(2019, 12, 31))';
 period = (datetime(1999, 1, 1):datetime(2018, 12, 31))';
 %{ selection of leapday-non leap day }%
 leapDayActive = true;
@@ -9,7 +8,6 @@ else
     % NO LEAP DAY
     T = 365; %#ok<*UNRCH>
     period( period.Month == 2 & period.Day == 29 ) = [];
-    fullPeriod( fullPeriod.Month == 2 & fullPeriod.Day == 29 ) = [];
 end
 n_t = length(period);
 doy = myDOY( period );
@@ -19,24 +17,14 @@ clear leapDayActive
 %% obj functions
 % h flooding 1 value
 h_flo = 1.1;
+
 % dmv rain_weight n_t values
 mef = 22*ones(n_t,1);
 mef = min( mef, e);     % italian legislation defines mef as minimum between the value and the availabilityy, that in this case is the measured inflow
-% or 
-% load( fullfile( raw_data_root, 'utils', 'DMV_99_19_LD_it.txt' ), '-ascii' );
-% DMV_99_19_LD_it = timetable( (datetime(1999, 1, 1):datetime(2019, 12, 31))', DMV_99_19_LD_it );
-% mef = DMV_99_19_LD_it{period, "DMV_99_19_LD_it"};
-% clear DMV_99_19_LD_it;
 
 % rw will be used as deficit^(2-rw)
 rw = ones(n_t,1);           %abs value during the year: deficit^(2-1)
 rw( doy>= 91 & doy<=283 ) = 0;%squared during summer:     deficit^(2-0)
-% rw = rw-1;
-% or 
-% load( fullfile( raw_data_root, 'utils', 'rain_weight_99_19_LD.txt' ), '-ascii' );
-% rain_weight_99_19_LD = timetable( (datetime(1999, 1, 1):datetime(2019, 12, 31))', rain_weight_99_19_LD );
-% rw = rain_weight_99_19_LD{period, "rain_weight_99_19_LD"};
-% clear rain_weight_99_19_LD;
 
 % demand, s_low -365values
 load( fullfile( data_folder, 'LakeComoRawData', 'utils', 'aggregated_demand.txt' ), '-ascii' );
@@ -61,7 +49,7 @@ clear mef
 eps1 = 0.01;
 eps2 = 0.025;
 discr_h = [-0.8:0.1:-0.4, -0.4+eps1:eps1:1.2, 1.2+eps2:eps2:2.2, 2.5:0.5:5] ;
-discr_s = LakeComo.level2storage( discr_h );    %using discr_s or discr_h is the same
+discr_s = LakeComo.level2storage( discr_h, 0);    %using discr_s or discr_h is the same
 n_s = length(discr_s);
 clear eps1 eps2
 
@@ -75,7 +63,7 @@ clear V v
 %now I may want to fill the gaps in the most relevant part: 22-230 is
 %between MEF and max(comoDemand)
 eps1 = .1;
-discr_u = [discr_u; (22+eps1:eps1:LakeComo.max_release(LakeComo.level2storage(1.1), 1, 0) )'];
+discr_u = [discr_u; (22+eps1:eps1:LakeComo.max_release(LakeComo.level2storage(1.1,0), 1, 0) )'];
 discr_u = sort( discr_u );
 n_u = length( discr_u );
 clear eps1
@@ -98,8 +86,8 @@ for idx = 1:n_j
     end
 end
 clear zer eps1 idx
-%weights = eye(3);
-%n_j = 3;
+weights = [weights;eye(3)];
+n_j = n_j+3;
 
 %this is the multiplier for the output of the objectives:
 % flood days(static low) is(are) defined as day/year so I divide by the
@@ -117,11 +105,10 @@ Gk = diag( [1/yy, 1/n_t, 1/yy] );
 Gbias = zeros(N_obj,1);
 Gnorm = diag( [1, 1, 1] );
 
-%%
-% plots to see the discretization
+%% plots to see the discretization
 plot_on = false;
 if plot_on
-    figure, plot( historical{ fullPeriod, "h" } );
+    figure, plot( historical{ period, "h" } );
     hold on
     plot( [1, n_t], [discr_h', discr_h'] )
     
@@ -130,4 +117,4 @@ if plot_on
     hold on
     plot( [1, n_t], [discr_u, discr_u] )
 end
-clear fullPeriod plot_on
+clear plot_on

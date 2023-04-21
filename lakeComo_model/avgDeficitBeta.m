@@ -71,21 +71,7 @@ classdef avgDeficitBeta <objFunction
         
         function outputArg = norm_eval( obj, q, cday, doy)
             
-            %remove MEF
-            d = q - obj.MEF( cday );
-            
-            %negative values are not allowed, thus set to 0.
-            d( d<0 ) = 0;
-            
-            %deficit
-            d = obj.demand( doy ) -d;
-            d( d<0 ) = 0;
-            
-            %elevate to the requested power
-            d = d.^(2-obj.rain_weight(cday) );
-            
-            %average
-            outputArg = mean(d, 1, 'omitnan');
+            outputArg = obj.evaluate( q, cday, doy );
             outputArg = obj.normalize( outputArg );
         end
         

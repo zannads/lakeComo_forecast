@@ -33,7 +33,7 @@ classdef floodDays < objFunction
             %METHOD1 Summary of this method goes here
             %   Detailed explanation goes here
             
-            outputArg = sum(  double( h > obj.h_flo ), 1, 'omitnan' );
+            outputArg = obj.evaluate(h);
             outputArg = obj.normalize( outputArg );
         end
     end
