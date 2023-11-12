@@ -138,7 +138,7 @@ counts - > n_j row i is combination of weight that corresponds to n_j col i
     sim_s(t+1, :) = S_';
     %}
 end
-sim_h = LakeComo.storage2level(sim_s);
+sim_h = LakeComo.storage2level(sim_s, 0);
 clear t k G_ G Q H_t1 H_ R_ S_ idx_u 
 clear s_init runt_print
 
