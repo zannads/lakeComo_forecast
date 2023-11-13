@@ -14,9 +14,9 @@ The historical level and outflow measurements used are not publicy available as 
 All the data had different origin, format and variables. It was necessary to format all in the same way. 
 In the ***data_parser*** folder, you can find all the classes, functions and scripts that handle the data. 
 In particular I decided to use all time series parsed into a *Timetable* MATLAB Object. 
-The forecasts where similar, but not equal, hence I created a class (hydrological) *forecast* to handle them. Because of the different definition between the data, the main variable is the *inflow in the **next** 24 hours* ($inf_24$), hence between time $t$ and $t+24$. 
+The forecasts where similar, but not equal, hence I created a class (hydrological) *forecast* to handle them. Because of the different definition between the data, the main variable is the *inflow in the **next** 24 hours* ($inf_{24}$), hence between time $t$ and $t+24$. 
 >[! Note]
-> This decision of using the future discharge ($inf_24$) was a decision made at the beginning of the development, with not a lot of knowledge of the system and forced by some data I received early in the development, it is not advisable. Following version should use the *discharge in the **past** x hours* ($dis_x$) as EFASes (and any **GOOD** hydrological model) do.   
+> This decision of using the future discharge ($inf_{24}$) was a decision made at the beginning of the development, with not a lot of knowledge of the system and forced by some data I received early in the development, it is not advisable. Following version should use the *discharge in the **past** x hours* ($dis_x$) as EFASes (and any **GOOD** hydrological model) do.   
 ### Main functions/script/classes
 - *parse_probabilistic_forecast*: creates *forecast* objects for the EFAS forecast starting from the *.NetCDF* raw file.
 - *parse_determinstic_forecast*: creates *forecast* objects for the Det forecast starting from *.xlsx* files. 
@@ -35,10 +35,10 @@ The forecasts where similar, but not equal, hence I created a class (hydrologica
 Your Raw Data should have this structure in the folder *LakeComoRawData*: 
 - *efrf* sub seasonal efas forecast
 	- *LocationName* (Fuentes, Olginate, LakeComo, Mandello)
-		- one file for each instance (twice per week, 99-18). The original data from EFAS are $dis_06$, here the data are already processed as $dis_24$.
+		- one file for each instance (twice per week, 99-18). The original data from EFAS are $dis_{06}$, here the data are already processed as $dis_{24}$.
 - *efsr* seasonal efas forecast
 	- *LocationName* 
-		- one file for each instance (monthly, 99-19). Data as $dis_24$.
+		- one file for each instance (monthly, 99-19). Data as $dis_{24}$.
 - *PROGEA* 
 	- private info. (Data are in excel)
 - *utils* 
@@ -59,8 +59,8 @@ each object in its own class, save each object in a file in *LakeComoProcessedDa
 
 ### Step by Step Instructions
 #### Pre: 
-Install the *Statistical Toolbox*, for the function fitdist.
-Step 0 or load all the files in *LakeComoProcessedData* in the `workspace`.
+- Install the *Statistical Toolbox*, for the function fitdist.
+- Step 0 or load all the files in *LakeComoProcessedData* in the `workspace`.
 
 #### Run:
 `setup_base;
@@ -97,10 +97,11 @@ Save the variable in *Solutions/DDP*
 
 ## 3. Input Variable Selection *ivs* folder
 In this folder you find the scripts to run the IVS on the processed data. You can find the main algorithms and everything [here](https://github.com/zannads/MATLAB_IterativeInputSelection_with_Rtree-c.git).
+It is simply a fork on the original work of [Galelli, Castelletti, 2013](doi:10.1002/wrcr.20339) available [here](https://github.com/Critical-Infrastructure-Systems-Lab/Iterative_Input_Selection.git)
 
 #### Pre: 
-Install the IVS Toolbox.
-Put in the folder *candidate_variables_99_18* all the *.txt* files on which you want to run the IVS. This files have to be formatted correctly, i.e. txt files with a value for each row; total of 7305 values, one per day.
+- Install the IVS Toolbox.
+- Put in the folder *candidate_variables_99_18* all the *.txt* files on which you want to run the IVS. This files have to be formatted correctly, i.e. txt files with a value for each row; total of 7305 values, one per day.
 Select the number of the solution in the ddp that you want, create two txt files with release and level *release_sol#_99_18.txt* and save it in *Solutions/DDP*.
 
 #### Run:
@@ -112,8 +113,8 @@ The workspace resulting from each run will be saved as *Solutions/IVS/sol#/_ivs_
 It's a script and it access the base `workspace`, so it is possible to comment the line where the parameters are defined and define them directly in the command window. 
 
 ## 4. Evolutionary Multi-Objective Direct Policy Search *dps_support*
-The code to run the optimization is not available here. 
-However in the folder you can find some functions to upload the result in a struct *matlabize_solution*, extract the parameters of the control law given the point in the pareto front *extract_params*. 
+The code to run the optimization is available [here](https://github.com/EILab-Polimi/LakeComo.git). The two specific models developed during the thesis (new problem formulation and joint learning) are available in [my fork of the project](https://github.com/zannads/LakeComo.git).
+However, in this folder you can find some functions to upload the result in a struct *matlabize_solution*, extract the parameters of the control law given the point in the pareto front *extract_params*. 
 
 #### Pre:
 Solutions are saved in *Solutions/EMODPS* or *Solutions/EMODPS_autoselect* if using the extended policy.
