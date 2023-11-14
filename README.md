@@ -1,5 +1,6 @@
 # lakeComo_forecast
  [![DOI](https://zenodo.org/badge/424029432.svg)](https://zenodo.org/doi/10.5281/zenodo.10123624)
+ 
 This project includes all the code developed during the production of my Master thesis [Zanutto, 2022](http://hdl.handle.net/10589/190646).
 
 The goal of the thesis was to investigate the possibility to use operational hydrological forecasts and train a control policy for the release of a water reservoir, the Lake Como in Italy, that was directly informed by the forecasts.
