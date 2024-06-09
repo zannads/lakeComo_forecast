@@ -19,7 +19,8 @@ redo_det            = false;
 redo_allefrf        = false;
 redo_allBS          = false;
 redo_allpI          = false;
-redo_allNorm        = true;
+redo_allNorm        = false;
+redo_quant          = true;
 
 qt2gen = 0.1:0.1:0.9;
 %%
@@ -530,6 +531,47 @@ if redo_allNorm
     
     fprintf( fid, '%d\n', sign2w(:) ); % I save above
     fclose(fid);
+end
+
+%% 
+if redo_quant
+    
+    for quantiles = 0:0.25:1
+        sign2w = zeros(7305,42);
+        fid = fopen( "candidate_variables/LakeComo_efrf_all_"+string(quantiles).replace('.', '-') +"Norm.txt", 'w' );
+        idx = 3; % location iter
+        for aT_ = 1:42 %agg time iter
+            %efrf
+            ts = efrfForecast(idx).getTimeSeries( aT_, 0, true);
+            %get one realization(365 d) of ciclostationary mean of release
+            csShort = ciclostationary( ts );
+            sign2w(1, aT_) = csShort{csShort.Time.Month==1 & csShort.Time.Day==1 , 1};
+            sign2w(2, aT_) = csShort{csShort.Time.Month==1 & csShort.Time.Day==2 , 1};
+            % efrf starts from 3 jan 1999
+            sign2w(3:end, aT_) = quantile(ts.Variables,quantiles,2);
+        end
+        ms2w = min( sign2w, [], 1);
+        Ms2w = max( sign2w, [], 1);
+        sign2w = (sign2w-ms2w)./(Ms2w-ms2w);
+        
+        fprintf( fid, '%d\n', sign2w(:) ); % I save above
+        fclose(fid);
+        
+        sign2w = zeros(7305,183);
+        fid = fopen( "candidate_variables/LakeComo_efsr_all_"+string(quantiles).replace('.', '-') +"Norm.txt", 'w' );
+    %    idx = 3; % location iter
+        for aT_ = 1:183 %agg time iter
+            %efrf
+            ts = efsrForecast(idx).getTimeSeries( aT_, 0, true);
+            sign2w(:, aT_) = quantile(ts{1:7305,:},quantiles, 2);
+        end
+        ms2w = min( sign2w, [], 1);
+        Ms2w = max( sign2w, [], 1);
+        sign2w = (sign2w-ms2w)./(Ms2w-ms2w);
+        
+        fprintf( fid, '%d\n', sign2w(:) ); % I save above
+        fclose(fid);
+    end
 end
 
 %%

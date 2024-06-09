@@ -4,7 +4,7 @@ function p2d = order2plot(p2d)
     p2d = [ qq, p2d(ord,2) ]; % reorder along the first dim
     
     idx = 2;
-    while idx <= length(p2d)
+    while idx <= size(p2d,1)
         if p2d(idx,2) >p2d(idx-1,2)
             p2d(idx,:) = []; % you automatically go one ahead by removing
         else

@@ -29,6 +29,7 @@ function draw_my_metrics( sols, ax )
     end
     xticklabels(ax(1), {''} );
     title( ax(1), 'HV' );
+    text( ax(1), 1:nS, Hv(1:nS), num2str(Hv(1:nS), '%.2f'), 'VerticalAlignment','bottom','HorizontalAlignment','center');
     % arrow to insert b.Position
     
     for idx = 1:(nS+1)
@@ -37,6 +38,7 @@ function draw_my_metrics( sols, ax )
     xticklabels(ax(2), {''} );
     set(ax(2), 'YDir','reverse')
     title(ax(2), 'Dmin' );
+    text( ax(2), 1:nS, dmin(1:nS), num2str(dmin(1:nS)', '%.2f'), 'VerticalAlignment','top','HorizontalAlignment','center');
     
     for idx = 1:(nS+1)
         bar(ax(3), idx, davg(idx) );
@@ -44,5 +46,6 @@ function draw_my_metrics( sols, ax )
     xticklabels(ax(3), {''} );
     set(ax(3), 'YDir','reverse')
     title(ax(3), 'Davg' );
+    text( ax(3), 1:nS, davg(1:nS), num2str(davg(1:nS)', '%.2f'), 'VerticalAlignment','top','HorizontalAlignment','center');
 end
 
